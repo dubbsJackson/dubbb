@@ -3,11 +3,11 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Lenis from 'lenis'
 import { categories, collections, SHOPIFY_DOMAIN } from './data/products.js'
+import { initScene, setSceneProgress, setSceneAccent, setScenePointer } from './scene.js'
 
 gsap.registerPlugin(ScrollTrigger)
 
-const fmt = (n) =>
-  n % 1 === 0 ? `$${n}` : `$${n.toFixed(2)}`
+const fmt = (n) => (n % 1 === 0 ? `$${n}` : `$${n.toFixed(2)}`)
 
 // Buy buttons use Shopify's native checkout. Single-variant products jump
 // straight into checkout via a cart permalink; multi-variant products open
@@ -29,28 +29,49 @@ function BuyButton({ product, accent }) {
   )
 }
 
+function Stars() {
+  return (
+    <span className="stars" aria-hidden="true">
+      ★★★★★
+    </span>
+  )
+}
+
+function SplitChars({ text, className }) {
+  return (
+    <span className={className} aria-label={text} role="text">
+      {text.split('').map((ch, i) => (
+        <span className="char" aria-hidden="true" key={i}>
+          {ch === ' ' ? ' ' : ch}
+        </span>
+      ))}
+    </span>
+  )
+}
+
 function Hero() {
   const ref = useRef(null)
   useEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.from('.hero-line', {
-        yPercent: 110,
-        stagger: 0.12,
+      gsap.from('.char', {
+        yPercent: 120,
+        rotate: 8,
+        stagger: 0.028,
         duration: 1.1,
         ease: 'power4.out',
-        delay: 0.2
+        delay: 0.25
       })
-      gsap.from('.hero-sub, .hero-cta, .hero-scroll-cue', {
+      gsap.from('.hero-sub, .hero-cta, .hero-stats, .hero-scroll-cue', {
         opacity: 0,
-        y: 24,
-        stagger: 0.1,
-        duration: 0.8,
-        delay: 0.9,
+        y: 26,
+        stagger: 0.12,
+        duration: 0.9,
+        delay: 1.1,
         ease: 'power3.out'
       })
       gsap.to('.hero-inner', {
-        yPercent: -12,
-        opacity: 0.25,
+        yPercent: -14,
+        opacity: 0,
         ease: 'none',
         scrollTrigger: {
           trigger: ref.current,
@@ -65,31 +86,44 @@ function Hero() {
 
   return (
     <header className="hero" ref={ref}>
+      <div className="hero-watermark" aria-hidden="true">DBX</div>
       <div className="hero-inner">
-        <p className="hero-sub">DreamBodX Fitness — gear · gym · programs</p>
-        <h1 className="hero-title" aria-label="Build the body you dream of">
-          <span className="hero-mask"><span className="hero-line">BUILD THE</span></span>
-          <span className="hero-mask"><span className="hero-line accent">BODY YOU</span></span>
-          <span className="hero-mask"><span className="hero-line">DREAM OF</span></span>
+        <p className="hero-sub">DreamBodX Fitness</p>
+        <h1 className="hero-title">
+          <span className="hero-mask"><SplitChars text="BUILD THE" /></span>
+          <span className="hero-mask accent"><SplitChars text="BODY YOU" /></span>
+          <span className="hero-mask"><SplitChars text="DREAM OF" /></span>
         </h1>
         <p className="hero-cta">
-          Real equipment. Real programs. Real results — shipped to your door.
+          Gear, gym equipment, activewear & programs — real products, shipped to your door.
         </p>
+        <div className="hero-stats">
+          <div><strong>60+</strong><span>products</span></div>
+          <div><strong>14</strong><span>collections</span></div>
+          <div><strong>100%</strong><span>Shopify secure checkout</span></div>
+        </div>
         <div className="hero-scroll-cue" aria-hidden="true">
-          <span className="cue-dot" /> scroll to explore
+          <span className="cue-dot" /> scroll to enter the gym
         </div>
       </div>
     </header>
   )
 }
 
-function CategorySection({ category, flip }) {
+function CategorySection({ category, flip, index }) {
   const ref = useRef(null)
   useEffect(() => {
     const ctx = gsap.context(() => {
+      // retint the 3D scene as this section takes over the viewport
+      ScrollTrigger.create({
+        trigger: ref.current,
+        start: 'top 55%',
+        end: 'bottom 55%',
+        onToggle: (self) => self.isActive && setSceneAccent(category.accent)
+      })
       gsap.from('.cat-head > *', {
         opacity: 0,
-        y: 40,
+        y: 46,
         stagger: 0.1,
         duration: 0.9,
         ease: 'power3.out',
@@ -98,19 +132,20 @@ function CategorySection({ category, flip }) {
       gsap.utils.toArray('.product-card', ref.current).forEach((card, i) => {
         gsap.from(card, {
           opacity: 0,
-          y: 80,
-          duration: 0.9,
-          delay: (i % 4) * 0.08,
+          y: 90,
+          rotateX: -6,
+          duration: 1,
+          delay: (i % 4) * 0.09,
           ease: 'power3.out',
-          scrollTrigger: { trigger: card, start: 'top 88%' }
+          scrollTrigger: { trigger: card, start: 'top 90%' }
         })
         const img = card.querySelector('.product-img img')
         if (img) {
           gsap.fromTo(
             img,
-            { yPercent: -8 },
+            { yPercent: -7 },
             {
-              yPercent: 8,
+              yPercent: 7,
               ease: 'none',
               scrollTrigger: { trigger: card, start: 'top bottom', end: 'bottom top', scrub: true }
             }
@@ -119,7 +154,7 @@ function CategorySection({ category, flip }) {
       })
     }, ref)
     return () => ctx.revert()
-  }, [])
+  }, [category.accent])
 
   return (
     <section
@@ -128,6 +163,7 @@ function CategorySection({ category, flip }) {
       ref={ref}
       style={{ '--accent': category.accent }}
     >
+      <div className="cat-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</div>
       <div className="cat-head">
         <p className="cat-kicker">{category.kicker}</p>
         <h2>{category.title}</h2>
@@ -148,6 +184,12 @@ function CategorySection({ category, flip }) {
             <div className="product-meta">
               <h3>{p.name}</h3>
               <p>{p.blurb}</p>
+              {p.review && (
+                <blockquote className="product-review">
+                  <Stars />
+                  <span>“{p.review}”</span>
+                </blockquote>
+              )}
               <BuyButton product={p} accent={category.accent} />
             </div>
           </article>
@@ -177,7 +219,7 @@ function Marquee() {
   const words = 'TRAIN · SWEAT · SCULPT · REPEAT · '
   return (
     <div className="marquee" ref={ref} aria-hidden="true">
-      <div className="marquee-track">{(words.repeat(6))}</div>
+      <div className="marquee-track">{words.repeat(6)}</div>
     </div>
   )
 }
@@ -186,13 +228,20 @@ function Collections() {
   const ref = useRef(null)
   useEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.from('.coll-row', {
+      ScrollTrigger.create({
+        trigger: ref.current,
+        start: 'top 55%',
+        end: 'bottom 55%',
+        onToggle: (self) => self.isActive && setSceneAccent('#c8ff2d')
+      })
+      gsap.from('.coll-tile', {
         opacity: 0,
-        x: -40,
-        stagger: 0.06,
-        duration: 0.7,
+        y: 60,
+        scale: 0.96,
+        stagger: 0.05,
+        duration: 0.8,
         ease: 'power3.out',
-        scrollTrigger: { trigger: ref.current, start: 'top 75%' }
+        scrollTrigger: { trigger: ref.current, start: 'top 72%' }
       })
     }, ref)
     return () => ctx.revert()
@@ -203,45 +252,74 @@ function Collections() {
         <p className="cat-kicker">06 — Everything</p>
         <h2>Shop the Full Collection</h2>
         <p className="cat-blurb">
-          The complete DreamBodX catalog lives on our store — over 60 products across ten collections.
+          The complete DreamBodX catalog — over 60 products across fourteen collections.
         </p>
       </div>
-      <ul className="coll-list">
+      <div className="coll-grid">
         {collections.map((c) => (
-          <li key={c.handle}>
-            <a
-              className="coll-row"
-              href={`${SHOPIFY_DOMAIN}/collections/${c.handle}`}
-              target="_blank"
-              rel="noreferrer"
-            >
+          <a
+            className="coll-tile"
+            key={c.handle}
+            href={`${SHOPIFY_DOMAIN}/collections/${c.handle}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <img src={c.image} alt={c.title} loading="lazy" />
+            <div className="coll-tile-info">
               <span className="coll-title">{c.title}</span>
               <span className="coll-count">{c.count} products →</span>
-            </a>
-          </li>
+            </div>
+          </a>
         ))}
-      </ul>
+      </div>
     </section>
   )
 }
 
 export default function App() {
+  const canvasRef = useRef(null)
+
   useEffect(() => {
+    const handle = initScene(canvasRef.current)
+
+    ScrollTrigger.create({
+      trigger: document.body,
+      start: 'top top',
+      end: 'bottom bottom',
+      scrub: true,
+      onUpdate: (self) => setSceneProgress(self.progress)
+    })
+
+    const onMove = (e) => {
+      setScenePointer(
+        (e.clientX / window.innerWidth - 0.5) * 2,
+        -(e.clientY / window.innerHeight - 0.5) * 2
+      )
+    }
+    window.addEventListener('pointermove', onMove)
+
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (reduce) return
-    const lenis = new Lenis({ lerp: 0.1, smoothWheel: true })
-    lenis.on('scroll', ScrollTrigger.update)
-    const raf = (time) => lenis.raf(time * 1000)
-    gsap.ticker.add(raf)
-    gsap.ticker.lagSmoothing(0)
+    let lenis
+    let raf
+    if (!reduce) {
+      lenis = new Lenis({ lerp: 0.1, smoothWheel: true })
+      lenis.on('scroll', ScrollTrigger.update)
+      raf = (time) => lenis.raf(time * 1000)
+      gsap.ticker.add(raf)
+      gsap.ticker.lagSmoothing(0)
+    }
     return () => {
-      gsap.ticker.remove(raf)
-      lenis.destroy()
+      window.removeEventListener('pointermove', onMove)
+      if (raf) gsap.ticker.remove(raf)
+      lenis?.destroy()
+      handle.destroy()
     }
   }, [])
 
   return (
     <>
+      <canvas className="bg-canvas" ref={canvasRef} aria-hidden="true" />
+      <div className="grain" aria-hidden="true" />
       <nav className="topbar">
         <span className="logo">DREAMBODX</span>
         <a className="topbar-link" href={SHOPIFY_DOMAIN} target="_blank" rel="noreferrer">
@@ -252,7 +330,7 @@ export default function App() {
       <main>
         {categories.map((c, i) => (
           <div key={c.id}>
-            <CategorySection category={c} flip={i % 2 === 1} />
+            <CategorySection category={c} flip={i % 2 === 1} index={i} />
             {i === 1 && <Marquee />}
           </div>
         ))}
@@ -263,6 +341,9 @@ export default function App() {
         <p>
           Secure checkout powered by Shopify ·{' '}
           <a href={SHOPIFY_DOMAIN} target="_blank" rel="noreferrer">dreambodxfitness.com</a>
+        </p>
+        <p className="footer-fine">
+          Review highlights paraphrased from verified buyer feedback.
         </p>
         <p className="footer-fine">© {new Date().getFullYear()} DreamBodX Fitness. All rights reserved.</p>
       </footer>

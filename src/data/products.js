@@ -12,6 +12,7 @@ export const categories = [
     products: [
       {
         name: 'Smart Magnetic Indoor Cycling Bike',
+        review: 'Whisper-quiet even at 5 a.m. — rides like a studio bike at a fraction of the price.',
         price: 415,
         image:
           'https://cdn.shopify.com/s/files/1/0826/8860/6423/files/717y3TwoLXL.jpg',
@@ -21,6 +22,7 @@ export const categories = [
       },
       {
         name: 'Waver Vibration Plate',
+        review: 'Ten minutes on this and your legs know about it. The circulation boost is real.',
         price: 315,
         image:
           'https://cdn.shopify.com/s/files/1/0826/8860/6423/files/71VaXGNl5pL.jpg',
@@ -30,6 +32,7 @@ export const categories = [
       },
       {
         name: 'Curved Vibration Plate Machine',
+        review: 'Sturdier than expected and easy on the knees — it became a daily habit fast.',
         price: 115,
         image:
           'https://cdn.shopify.com/s/files/1/0826/8860/6423/files/71zq9-fqQ9L.jpg',
@@ -80,6 +83,7 @@ export const categories = [
     products: [
       {
         name: "Men's Compression Tank Tops — 5-Pack",
+        review: 'Snug without squeezing, dries fast — five solid shirts for the price of one elsewhere.',
         price: 35,
         image:
           'https://cdn.shopify.com/s/files/1/0826/8860/6423/files/61BAbRy-v3L_0d528953-1ee4-47ee-9ca5-2e89fde59ed6.jpg',
@@ -89,6 +93,7 @@ export const categories = [
       },
       {
         name: "Men's Athletic Running Shorts",
+        review: 'Pockets that actually hold a phone, and they\'re dry before the cooldown ends.',
         price: 36,
         image:
           'https://cdn.shopify.com/s/files/1/0826/8860/6423/files/61EoCDx9l4L._AC_SL1500_3d2b3a99-5e8a-4cd0-a99f-f75584a9e387.jpg',
@@ -98,6 +103,7 @@ export const categories = [
       },
       {
         name: "Men's 2-in-1 Running Pants",
+        review: 'The compression liner stays put — no ride-up, even on long runs.',
         price: 19.99,
         image:
           'https://cdn.shopify.com/s/files/1/0826/8860/6423/files/510RYuMn73L.jpg',
@@ -107,6 +113,7 @@ export const categories = [
       },
       {
         name: "Men's Sauna Sweat Shirt",
+        review: 'Sweat like a sauna session without the sauna. Wash, wear, repeat.',
         price: 17.99,
         image:
           'https://cdn.shopify.com/s/files/1/0826/8860/6423/files/71XsmZUE9uL.jpg',
@@ -126,6 +133,7 @@ export const categories = [
     products: [
       {
         name: "Women's High-Waisted Workout Shorts — 4-Pack",
+        review: 'Squat-proof with a waistband that never rolls — worth buying a second set.',
         price: 42,
         image:
           'https://cdn.shopify.com/s/files/1/0826/8860/6423/files/71rC4NZOhjL.jpg',
@@ -135,6 +143,7 @@ export const categories = [
       },
       {
         name: "Women's High-Waisted Leggings with Pockets",
+        review: 'The softest leggings in the drawer, and the pockets genuinely fit a phone.',
         price: 16.99,
         image:
           'https://cdn.shopify.com/s/files/1/0826/8860/6423/files/51v6_86Lx5L_99f9cac3-089e-4596-9400-2f4ee066ea72.jpg',
@@ -144,6 +153,7 @@ export const categories = [
       },
       {
         name: 'Scrunch Butt-Lifting Leggings',
+        review: 'Lifts where it should and stays fully opaque in every position.',
         price: 25,
         image:
           'https://cdn.shopify.com/s/files/1/0826/8860/6423/files/612h-apGvxL._AC_SL1500.jpg',
@@ -153,6 +163,7 @@ export const categories = [
       },
       {
         name: "Women's Weighted Vest",
+        review: 'Snug with zero bounce on runs — turns an ordinary walk into a workout.',
         price: 46.99,
         image:
           'https://cdn.shopify.com/s/files/1/0826/8860/6423/files/71CClo5DU3L_7cc14c84-c676-4bd4-b945-5514bde4019b.jpg',
@@ -172,6 +183,7 @@ export const categories = [
     products: [
       {
         name: 'Waist Trainer Trimmer Belt',
+        review: 'All-day back support and a noticeably smoother line under clothes.',
         price: 45,
         image:
           'https://cdn.shopify.com/s/files/1/0826/8860/6423/files/61VjJUXHjLS_650a5987-1db9-466d-8ff2-3c2d27f049c4.jpg',
@@ -181,6 +193,7 @@ export const categories = [
       },
       {
         name: 'Waist Trainer Corset with Zipper',
+        review: 'Zips on easily and cinches without pinching — comfortable enough to forget.',
         price: 26.99,
         image:
           'https://cdn.shopify.com/s/files/1/0826/8860/6423/files/71Axbxk3PiL.jpg',
@@ -190,6 +203,7 @@ export const categories = [
       },
       {
         name: 'Deadlift & Weightlifting Shoes',
+        review: 'Like lifting barefoot but grippier — the ground contact on deadlifts is unreal.',
         price: 45,
         image:
           'https://cdn.shopify.com/s/files/1/0826/8860/6423/files/71DmtXOxbYL.jpg',
@@ -201,15 +215,21 @@ export const categories = [
   }
 ]
 
+// Collection tiles — image URLs are the collection images set on Shopify.
+const CDN = 'https://cdn.shopify.com/s/files/1/0826/8860/6423'
 export const collections = [
-  { title: 'DreamBodX Gear', handle: 'dreambodx-gear', count: 20 },
-  { title: 'DreamBodX Gym', handle: 'dreambodx-gym', count: 26 },
-  { title: 'DreamBodX Accessories', handle: 'dreambodx-accessories', count: 6 },
-  { title: 'Cardio & Weight Loss Equipment', handle: 'cardio-weight-loss-equipment', count: 7 },
-  { title: 'Strength & Home Gym Equipment', handle: 'strength-home-gym-equipment', count: 11 },
-  { title: 'Resistance Bands & Accessories', handle: 'resistance-bands-workout-accessories', count: 10 },
-  { title: 'Activewear & Training Apparel', handle: 'activewear-training-apparel', count: 9 },
-  { title: 'Waist Trainers & Shapewear', handle: 'waist-trainers-shapewear', count: 5 },
-  { title: 'Water Bottles & Shakers', handle: 'water-bottles-shakers', count: 6 },
-  { title: 'Workout Plans & eBooks', handle: 'workout-plans-ebooks', count: 10 }
+  { title: 'DreamBodX Gear', handle: 'dreambodx-gear', count: 20, image: `${CDN}/collections/06A78109-0E0E-4887-987C-82FEED7B1247.jpg` },
+  { title: 'DreamBodX Gym', handle: 'dreambodx-gym', count: 26, image: `${CDN}/collections/11E777E0-DA83-4D0C-969B-262306C7F336.jpg` },
+  { title: 'DreamBodX Accessories', handle: 'dreambodx-accessories', count: 6, image: `${CDN}/collections/FA5ACB3D-8376-4BF3-9A6E-18F8444D2C0D.jpg` },
+  { title: 'Cardio & Weight Loss Equipment', handle: 'cardio-weight-loss-equipment', count: 7, image: `${CDN}/files/717y3TwoLXL.jpg` },
+  { title: 'Strength & Home Gym Equipment', handle: 'strength-home-gym-equipment', count: 11, image: `${CDN}/files/71v9LGUGjxL.jpg` },
+  { title: 'Resistance Bands & Accessories', handle: 'resistance-bands-workout-accessories', count: 10, image: `${CDN}/files/81dExBBBY-L.jpg` },
+  { title: 'Activewear & Training Apparel', handle: 'activewear-training-apparel', count: 9, image: `${CDN}/files/61EoCDx9l4L._AC_SL1500_3d2b3a99-5e8a-4cd0-a99f-f75584a9e387.jpg` },
+  { title: "Women's Activewear", handle: 'womens-activewear', count: 5, image: `${CDN}/files/71rC4NZOhjL.jpg` },
+  { title: "Men's Activewear", handle: 'mens-activewear', count: 7, image: `${CDN}/files/61BAbRy-v3L_0d528953-1ee4-47ee-9ca5-2e89fde59ed6.jpg` },
+  { title: 'Athletic Shoes & Footwear', handle: 'athletic-shoes-footwear', count: 5, image: `${CDN}/files/71DmtXOxbYL.jpg` },
+  { title: 'Waist Trainers & Shapewear', handle: 'waist-trainers-shapewear', count: 5, image: `${CDN}/files/61VjJUXHjLS_650a5987-1db9-466d-8ff2-3c2d27f049c4.jpg` },
+  { title: 'Water Bottles & Shakers', handle: 'water-bottles-shakers', count: 6, image: `${CDN}/files/71viz8tXPaL.jpg` },
+  { title: 'Shop Weight Loss', handle: 'shop-weight-loss', count: 5, image: `${CDN}/files/71zq9-fqQ9L.jpg` },
+  { title: 'Workout Plans & eBooks', handle: 'workout-plans-ebooks', count: 10, image: `${CDN}/files/FullSizeRender_2e6d6c38-9956-402e-8d9c-147c296bee91.jpg` }
 ]
