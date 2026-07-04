@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Lenis from 'lenis'
@@ -9,56 +9,23 @@ gsap.registerPlugin(ScrollTrigger)
 const fmt = (n) =>
   n % 1 === 0 ? `$${n}` : `$${n.toFixed(2)}`
 
-function useCheckoutBanner() {
-  const [banner, setBanner] = useState(null)
-  useEffect(() => {
-    const q = new URLSearchParams(window.location.search).get('checkout')
-    if (q === 'success') setBanner({ kind: 'ok', text: 'Payment received — thank you! Check your email for your receipt.' })
-    if (q === 'cancelled') setBanner({ kind: 'warn', text: 'Checkout cancelled — your cart is safe whenever you are ready.' })
-    if (q) window.history.replaceState({}, '', window.location.pathname)
-  }, [])
-  return [banner, () => setBanner(null)]
-}
-
+// Buy buttons use Shopify's native checkout. Single-variant products jump
+// straight into checkout via a cart permalink; multi-variant products open
+// the product page so the shopper can pick size/color first.
 function BuyButton({ product, accent }) {
-  const [state, setState] = useState('idle') // idle | loading | unavailable
-
-  async function buy() {
-    if (state !== 'idle') return
-    setState('loading')
-    try {
-      const res = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: product.name,
-          amount: product.price,
-          image: product.image
-        })
-      })
-      const data = await res.json()
-      if (res.ok && data.url) {
-        window.location.href = data.url
-        return
-      }
-      setState('unavailable')
-    } catch {
-      setState('unavailable')
-    }
-    setTimeout(() => setState('idle'), 4000)
-  }
-
+  const href = product.checkoutVariant
+    ? `${SHOPIFY_DOMAIN}/cart/${product.checkoutVariant}:1`
+    : `${SHOPIFY_DOMAIN}/products/${product.handle}`
   return (
-    <button
+    <a
       className="buy-btn"
       style={{ '--accent': accent }}
-      onClick={buy}
-      disabled={state === 'loading'}
+      href={href}
+      target="_blank"
+      rel="noreferrer"
     >
-      {state === 'idle' && `Buy Now — ${fmt(product.price)}`}
-      {state === 'loading' && 'Opening checkout…'}
-      {state === 'unavailable' && 'Checkout opening soon'}
-    </button>
+      {`Buy Now — ${fmt(product.price)}`}
+    </a>
   )
 }
 
@@ -259,8 +226,6 @@ function Collections() {
 }
 
 export default function App() {
-  const [banner, dismiss] = useCheckoutBanner()
-
   useEffect(() => {
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     if (reduce) return
@@ -277,12 +242,6 @@ export default function App() {
 
   return (
     <>
-      {banner && (
-        <div className={`banner ${banner.kind}`} role="status">
-          {banner.text}
-          <button onClick={dismiss} aria-label="Dismiss">×</button>
-        </div>
-      )}
       <nav className="topbar">
         <span className="logo">DREAMBODX</span>
         <a className="topbar-link" href={SHOPIFY_DOMAIN} target="_blank" rel="noreferrer">
@@ -302,7 +261,7 @@ export default function App() {
       <footer className="footer">
         <p className="footer-logo">DREAMBODX FITNESS</p>
         <p>
-          Secure checkout powered by Stripe ·{' '}
+          Secure checkout powered by Shopify ·{' '}
           <a href={SHOPIFY_DOMAIN} target="_blank" rel="noreferrer">dreambodxfitness.com</a>
         </p>
         <p className="footer-fine">© {new Date().getFullYear()} DreamBodX Fitness. All rights reserved.</p>

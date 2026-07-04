@@ -54,6 +54,8 @@ export const categories = [
           'https://cdn.shopify.com/s/files/1/0826/8860/6423/files/FullSizeRender_2e6d6c38-9956-402e-8d9c-147c296bee91.jpg',
         handle:
           'the-complete-glp-1-ozempic-weight-loss-guide-exercise-nutrition-muscle-preservation-program-digital-pdf',
+        // single-variant product — cart permalink goes straight to Shopify checkout
+        checkoutVariant: 48819711115479,
         blurb: 'Exercise, nutrition & muscle preservation on GLP-1 medications. Digital PDF.'
       },
       {
@@ -63,6 +65,7 @@ export const categories = [
           'https://cdn.shopify.com/s/files/1/0826/8860/6423/files/710rQJbxdyL_faae2280-93c1-4ddd-912a-579032bba26a.jpg',
         handle:
           'healthy-grilled-chicken-cookbook-for-weight-loss-high-protein-recipe-ebook',
+        checkoutVariant: 48816243540183,
         blurb: 'High-protein recipes that make losing weight taste good. eBook.'
       }
     ]
