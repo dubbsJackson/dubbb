@@ -215,21 +215,22 @@ export const categories = [
   }
 ]
 
-// Collection tiles — image URLs are the collection images set on Shopify.
-const CDN = 'https://cdn.shopify.com/s/files/1/0826/8860/6423'
+// Collection tiles — exact collection image URLs as served by the Shopify
+// Admin API (keep the ?v= version params; they are part of the live URL).
+const COLL = 'https://cdn.shopify.com/s/files/1/0826/8860/6423/collections'
 export const collections = [
-  { title: 'DreamBodX Gear', handle: 'dreambodx-gear', count: 20, image: `${CDN}/collections/06A78109-0E0E-4887-987C-82FEED7B1247.jpg` },
-  { title: 'DreamBodX Gym', handle: 'dreambodx-gym', count: 26, image: `${CDN}/collections/11E777E0-DA83-4D0C-969B-262306C7F336.jpg` },
-  { title: 'DreamBodX Accessories', handle: 'dreambodx-accessories', count: 6, image: `${CDN}/collections/FA5ACB3D-8376-4BF3-9A6E-18F8444D2C0D.jpg` },
-  { title: 'Cardio & Weight Loss Equipment', handle: 'cardio-weight-loss-equipment', count: 7, image: `${CDN}/files/717y3TwoLXL.jpg` },
-  { title: 'Strength & Home Gym Equipment', handle: 'strength-home-gym-equipment', count: 11, image: `${CDN}/files/71v9LGUGjxL.jpg` },
-  { title: 'Resistance Bands & Accessories', handle: 'resistance-bands-workout-accessories', count: 10, image: `${CDN}/files/81dExBBBY-L.jpg` },
-  { title: 'Activewear & Training Apparel', handle: 'activewear-training-apparel', count: 9, image: `${CDN}/files/61EoCDx9l4L._AC_SL1500_3d2b3a99-5e8a-4cd0-a99f-f75584a9e387.jpg` },
-  { title: "Women's Activewear", handle: 'womens-activewear', count: 5, image: `${CDN}/files/71rC4NZOhjL.jpg` },
-  { title: "Men's Activewear", handle: 'mens-activewear', count: 7, image: `${CDN}/files/61BAbRy-v3L_0d528953-1ee4-47ee-9ca5-2e89fde59ed6.jpg` },
-  { title: 'Athletic Shoes & Footwear', handle: 'athletic-shoes-footwear', count: 5, image: `${CDN}/files/71DmtXOxbYL.jpg` },
-  { title: 'Waist Trainers & Shapewear', handle: 'waist-trainers-shapewear', count: 5, image: `${CDN}/files/61VjJUXHjLS_650a5987-1db9-466d-8ff2-3c2d27f049c4.jpg` },
-  { title: 'Water Bottles & Shakers', handle: 'water-bottles-shakers', count: 6, image: `${CDN}/files/71viz8tXPaL.jpg` },
-  { title: 'Shop Weight Loss', handle: 'shop-weight-loss', count: 5, image: `${CDN}/files/71zq9-fqQ9L.jpg` },
-  { title: 'Workout Plans & eBooks', handle: 'workout-plans-ebooks', count: 10, image: `${CDN}/files/FullSizeRender_2e6d6c38-9956-402e-8d9c-147c296bee91.jpg` }
+  { title: 'DreamBodX Gear', handle: 'dreambodx-gear', count: 20, image: `${COLL}/06A78109-0E0E-4887-987C-82FEED7B1247.jpg?v=1780436234` },
+  { title: 'DreamBodX Gym', handle: 'dreambodx-gym', count: 26, image: `${COLL}/11E777E0-DA83-4D0C-969B-262306C7F336.jpg?v=1780436361` },
+  { title: 'DreamBodX Accessories', handle: 'dreambodx-accessories', count: 6, image: `${COLL}/FA5ACB3D-8376-4BF3-9A6E-18F8444D2C0D.jpg?v=1780436429` },
+  { title: 'Cardio & Weight Loss Equipment', handle: 'cardio-weight-loss-equipment', count: 7, image: `${COLL}/BE9ACF9C-E5F2-4AB1-B458-E943B776699D.jpg?v=1783203221` },
+  { title: 'Strength & Home Gym Equipment', handle: 'strength-home-gym-equipment', count: 11, image: `${COLL}/CED9EAF5-8010-4583-8A2D-C0ABD624EA3B.jpg?v=1783203222` },
+  { title: 'Resistance Bands & Accessories', handle: 'resistance-bands-workout-accessories', count: 10, image: `${COLL}/ECB27A04-0971-4E0B-824A-DA1BD1859918.jpg?v=1783203224` },
+  { title: 'Activewear & Training Apparel', handle: 'activewear-training-apparel', count: 9, image: `${COLL}/E645155C-12FB-4CC3-85A7-5CD4274419F7.jpg?v=1783203226` },
+  { title: "Women's Activewear", handle: 'womens-activewear', count: 5, image: `${COLL}/DB3E23AD-BC0B-4222-83E9-5827313CF0CB.jpg?v=1783203205` },
+  { title: "Men's Activewear", handle: 'mens-activewear', count: 7, image: `${COLL}/B067776E-A34D-40B5-BCEC-1235E2DD6707.jpg?v=1783203206` },
+  { title: 'Athletic Shoes & Footwear', handle: 'athletic-shoes-footwear', count: 5, image: `${COLL}/E8873B2B-4ADF-4C35-8CCD-FB4559486FD8.jpg?v=1783203208` },
+  { title: 'Waist Trainers & Shapewear', handle: 'waist-trainers-shapewear', count: 5, image: `${COLL}/25F31DC7-2A84-4ED1-9693-84524C65C37E.jpg?v=1783203238` },
+  { title: 'Water Bottles & Shakers', handle: 'water-bottles-shakers', count: 6, image: `${COLL}/E668FD94-6DF8-403D-9F5F-3EB0FF2B8468.jpg?v=1783203240` },
+  { title: 'Shop Weight Loss', handle: 'shop-weight-loss', count: 5, image: `${COLL}/32576542-B5EF-4A88-AF65-44477DAE2EFC.jpg?v=1783203211` },
+  { title: 'Workout Plans & eBooks', handle: 'workout-plans-ebooks', count: 10, image: `${COLL}/D66A219D-B0EC-440D-A0A5-DC5920F8CCDB.jpg?v=1783203242` }
 ]
