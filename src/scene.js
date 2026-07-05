@@ -72,7 +72,7 @@ export function initScene(canvas) {
   renderer.setSize(window.innerWidth, window.innerHeight)
 
   const scene = new THREE.Scene()
-  scene.fog = new THREE.FogExp2(0x050506, 0.055)
+  scene.fog = new THREE.FogExp2(0x0a0e1e, 0.05)
 
   const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 80)
   camera.position.set(0, 0, 6)

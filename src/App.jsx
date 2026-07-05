@@ -49,62 +49,103 @@ function SplitChars({ text, className }) {
   )
 }
 
+const BAND_TEXT =
+  'REAL GEAR · REAL PROGRAMS · REAL RESULTS · FREE YOUR DREAM BODY · DREAMBODX FITNESS · '
+
 function Hero() {
   const ref = useRef(null)
+  const videoRef = useRef(null)
+
   useEffect(() => {
     const ctx = gsap.context(() => {
       gsap.from('.char', {
-        yPercent: 120,
-        rotate: 8,
-        stagger: 0.028,
-        duration: 1.1,
+        yPercent: 130,
+        rotate: 10,
+        stagger: 0.03,
+        duration: 1.2,
         ease: 'power4.out',
         delay: 0.25
       })
-      gsap.from('.hero-sub, .hero-cta, .hero-stats, .hero-scroll-cue', {
+      gsap.from('.hero-sub, .hero-chips, .hero-actions, .hero-scroll-cue, .rot-badge', {
         opacity: 0,
         y: 26,
-        stagger: 0.12,
+        stagger: 0.1,
         duration: 0.9,
-        delay: 1.1,
+        delay: 1.2,
         ease: 'power3.out'
       })
-      gsap.to('.hero-inner', {
-        yPercent: -14,
-        opacity: 0,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: ref.current,
-          start: 'top top',
-          end: 'bottom top',
-          scrub: true
-        }
-      })
+      // parallax: each headline line escapes at a different speed, video zooms
+      gsap.to('.hero-line.l1', { yPercent: -60, ease: 'none', scrollTrigger: { trigger: ref.current, start: 'top top', end: 'bottom top', scrub: true } })
+      gsap.to('.hero-line.l2', { yPercent: -30, xPercent: 6, ease: 'none', scrollTrigger: { trigger: ref.current, start: 'top top', end: 'bottom top', scrub: true } })
+      gsap.to('.hero-line.l3', { yPercent: -12, ease: 'none', scrollTrigger: { trigger: ref.current, start: 'top top', end: 'bottom top', scrub: true } })
+      gsap.to('.hero-media video', { scale: 1.18, ease: 'none', scrollTrigger: { trigger: ref.current, start: 'top top', end: 'bottom top', scrub: true } })
+      gsap.to('.hero-inner', { opacity: 0, ease: 'none', scrollTrigger: { trigger: ref.current, start: '40% top', end: 'bottom top', scrub: true } })
     }, ref)
     return () => ctx.revert()
   }, [])
 
   return (
     <header className="hero" ref={ref}>
-      <div className="hero-watermark" aria-hidden="true">DBX</div>
+      <div className="hero-media" aria-hidden="true">
+        {/* Real training footage: drop a free-license clip at public/hero-video.mp4.
+            If the file is missing the element hides itself and the aurora + 3D
+            scene carry the background. */}
+        <video
+          ref={videoRef}
+          src="/hero-video.mp4"
+          autoPlay
+          muted
+          loop
+          playsInline
+          onError={() => videoRef.current && (videoRef.current.style.display = 'none')}
+        />
+        <div className="hero-duotone" />
+      </div>
+
+      <div className="hero-band top" aria-hidden="true">
+        <span className="hero-band-track">{BAND_TEXT.repeat(4)}</span>
+      </div>
+
       <div className="hero-inner">
         <p className="hero-sub">DreamBodX Fitness</p>
         <h1 className="hero-title">
-          <span className="hero-mask"><SplitChars text="BUILD THE" /></span>
-          <span className="hero-mask accent"><SplitChars text="BODY YOU" /></span>
-          <span className="hero-mask"><SplitChars text="DREAM OF" /></span>
+          <span className="hero-line l1"><SplitChars text="BUILD" /></span>
+          <span className="hero-line l2"><SplitChars text="THE BODY" /></span>
+          <span className="hero-line l3">
+            <SplitChars text="YOU " />
+            <em className="grad"><SplitChars text="DREAM" /></em>
+            <SplitChars text=" OF" />
+          </span>
         </h1>
-        <p className="hero-cta">
-          Gear, gym equipment, activewear & programs — real products, shipped to your door.
-        </p>
-        <div className="hero-stats">
-          <div><strong>60+</strong><span>products</span></div>
-          <div><strong>14</strong><span>collections</span></div>
-          <div><strong>100%</strong><span>Shopify secure checkout</span></div>
+        <div className="hero-chips" aria-hidden="true">
+          <span>Gym Equipment</span>
+          <span>Activewear</span>
+          <span>Shapewear</span>
+          <span>Programs</span>
+        </div>
+        <div className="hero-actions">
+          <a className="btn-primary" href="#cardio">Shop Best Sellers ↓</a>
+          <a className="btn-ghost" href={SHOPIFY_DOMAIN} target="_blank" rel="noreferrer">
+            Visit Full Store ↗
+          </a>
         </div>
         <div className="hero-scroll-cue" aria-hidden="true">
           <span className="cue-dot" /> scroll to enter the gym
         </div>
+      </div>
+
+      <div className="rot-badge" aria-hidden="true">
+        <svg viewBox="0 0 100 100">
+          <defs>
+            <path id="badge-circle" d="M 50,50 m -38,0 a 38,38 0 1,1 76,0 a 38,38 0 1,1 -76,0" />
+          </defs>
+          <text><textPath href="#badge-circle">TRAIN HARD · DREAM BIG · DBX ·</textPath></text>
+        </svg>
+        <span className="badge-arrow">↓</span>
+      </div>
+
+      <div className="hero-band bottom" aria-hidden="true">
+        <span className="hero-band-track">{BAND_TEXT.repeat(4)}</span>
       </div>
     </header>
   )
@@ -318,6 +359,9 @@ export default function App() {
 
   return (
     <>
+      <div className="aurora" aria-hidden="true">
+        <span /><span /><span /><span />
+      </div>
       <canvas className="bg-canvas" ref={canvasRef} aria-hidden="true" />
       <div className="grain" aria-hidden="true" />
       <nav className="topbar">
