@@ -25,3 +25,11 @@ Host `dist/` anywhere static (Netlify, Vercel, Cloudflare Pages, GitHub Pages, R
 
 - `src/data/products.js` — real product/collection data from the Shopify store (names, prices, CDN images, handles, checkout variant IDs)
 - `src/App.jsx` — hero, scroll-animated category sections, marquee, collection index, footer
+
+## DreamBodX Fitness — the game (`/game`)
+
+A mobile-first 30-day body-transformation life-sim in vanilla HTML/CSS/JS (ES modules, no framework, ~14 kB gzipped). Create an avatar, train in three gyms with four distinct mini-games, eat clean, keep the streak, watch the body visibly transform every 3 days, and hit the goal physique before day 30. Win/lose screens cross-sell the DreamBodX ebooks.
+
+- Served at `/game/` (built as a second Vite entry point), or host `game/` on any static server
+- `game/CLAUDE.md` is the game's design brief / source of truth
+- Leaderboard and saves are local for now, isolated behind `game/save.js` so a server can swap in later

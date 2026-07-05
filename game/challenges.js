@@ -1,0 +1,282 @@
+/* challenges.js — per-machine mini-games. Each returns a Promise<quality 0..1>.
+   Every game reads its difficulty from a tier object ({window, speed, floor})
+   so Easy/Medium/Hard gyms are the SAME code with tighter numbers (rule 5).
+   All games: touch-first (pointerdown), but Space/Enter works too. */
+
+const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* Shared shell: dark overlay inside the stage with title/instructions/body/actions. */
+function shell(container, { title, hint }) {
+  const el = document.createElement('div');
+  el.className = 'mini';
+  el.innerHTML = `
+    <h3 class="mini-title">${title}</h3>
+    <p class="mini-hint">${hint}</p>
+    <div class="mini-body"></div>
+    <div class="mini-actions"></div>`;
+  container.appendChild(el);
+  return { el, body: el.querySelector('.mini-body'), actions: el.querySelector('.mini-actions') };
+}
+
+function bigButton(label) {
+  const b = document.createElement('button');
+  b.className = 'btn burn mini-btn';
+  b.textContent = label;
+  return b;
+}
+
+/* floor() guarantees the un-loseable easy tier (rule 3) */
+const floored = (q, tier) => Math.max(tier.floor, Math.min(1, q));
+
+/* ---------------- WEIGHTS — tap-to-lift power meter ----------------
+   Feel: HEAVY. Every tap hoists the bar a notch; gravity drags it back.
+   Get the bar to the top before the clock dies. Quality = height + time left. */
+export function weightsGame(container, tier) {
+  return new Promise(resolve => {
+    const { el, body, actions } = shell(container, {
+      title: '💪 Weights',
+      hint: 'TAP fast to lift. The bar slips — beat gravity to the top!',
+    });
+    body.innerHTML = `
+      <div class="lift-meter"><div class="lift-fill"></div><div class="lift-target"></div></div>
+      <div class="mini-timer"><div class="mini-timer-fill"></div></div>`;
+    const fill = body.querySelector('.lift-fill');
+    const timerFill = body.querySelector('.mini-timer-fill');
+    const tap = bigButton('LIFT!');
+    actions.appendChild(tap);
+    tap.focus();
+
+    const duration = 6000;
+    const drainPerSec = 22 * tier.speed;   // gravity: faster at harder tiers
+    const perTap = 9 * tier.window + 4;    // tighter window = weaker taps
+    let power = 0, done = false, topAt = null;
+    const start = performance.now();
+    let last = start;
+
+    tap.addEventListener('pointerdown', e => { e.preventDefault(); power = Math.min(100, power + perTap); pulse(tap); });
+    tap.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { power = Math.min(100, power + perTap); } });
+
+    function frame(now) {
+      if (done) return;
+      const dt = (now - last) / 1000; last = now;
+      power = Math.max(0, power - drainPerSec * dt);
+      if (power >= 99 && topAt == null) topAt = now;
+      fill.style.height = power + '%';
+      const elapsed = now - start;
+      timerFill.style.width = Math.max(0, 100 - (elapsed / duration) * 100) + '%';
+      if (topAt != null || elapsed >= duration) return finish(now);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    function finish(now) {
+      done = true;
+      let q;
+      if (topAt != null) {
+        // reached the top: 0.75 base + up to 0.25 for speed
+        q = 0.75 + 0.25 * Math.max(0, 1 - (topAt - start) / duration);
+      } else {
+        q = (power / 100) * 0.7; // partial lift still pays something
+      }
+      endFlash(el, q, () => { el.remove(); resolve(floored(q, tier)); });
+    }
+  });
+}
+
+/* ---------------- TREADMILL — timing bar ----------------
+   Feel: PRECISION. A marker sweeps; tap inside the green zone. 3 strides. */
+export function treadmillGame(container, tier) {
+  return new Promise(resolve => {
+    const { el, body, actions } = shell(container, {
+      title: '🏃 Treadmill',
+      hint: 'Tap STRIDE when the marker is in the green zone. 3 strides.',
+    });
+    const zoneW = 24 * tier.window; // green zone width in %
+    body.innerHTML = `
+      <div class="repbar"><div class="zone"></div><div class="marker"></div></div>
+      <div class="stride-dots">${'<span class="sdot"></span>'.repeat(3)}</div>`;
+    const zone = body.querySelector('.zone');
+    const marker = body.querySelector('.marker');
+    const dots = [...body.querySelectorAll('.sdot')];
+    const tap = bigButton('STRIDE');
+    actions.appendChild(tap);
+    tap.focus();
+
+    let zoneL = 38;
+    const placeZone = () => { zoneL = 15 + Math.random() * (70 - zoneW); zone.style.left = zoneL + '%'; zone.style.width = zoneW + '%'; };
+    placeZone();
+
+    let pos = 0, dir = 1, rep = 0, done = false;
+    const qualities = [];
+    const stepPerFrame = (reduced() ? 1.1 : 1.7) * tier.speed;
+
+    function frame() {
+      if (done) return;
+      pos += dir * stepPerFrame;
+      if (pos >= 100) { pos = 100; dir = -1; }
+      if (pos <= 0) { pos = 0; dir = 1; }
+      marker.style.left = pos + '%';
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    function stride() {
+      if (done) return;
+      const center = zoneL + zoneW / 2;
+      const dist = Math.abs(pos - center);
+      let q;
+      if (pos >= zoneL && pos <= zoneL + zoneW) q = 1 - (dist / (zoneW / 2)) * 0.4; // in-zone: 0.6..1
+      else q = Math.max(0.1, 0.4 - dist / 130);                                     // miss: partial credit
+      qualities.push(q);
+      dots[rep].classList.add(q > 0.6 ? 'hit' : 'miss');
+      rep += 1;
+      pulse(tap);
+      if (rep >= 3) {
+        done = true;
+        const avg = qualities.reduce((a, b) => a + b, 0) / qualities.length;
+        endFlash(el, avg, () => { el.remove(); resolve(floored(avg, tier)); });
+      } else placeZone();
+    }
+    tap.addEventListener('pointerdown', e => { e.preventDefault(); stride(); });
+    tap.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') stride(); });
+  });
+}
+
+/* ---------------- BIKE — sustained rhythm ----------------
+   Feel: FLOW. Tap a steady beat to hold cadence inside the power band for 6s.
+   Taps push cadence up, it decays down; quality = time in band. */
+export function bikeGame(container, tier) {
+  return new Promise(resolve => {
+    const { el, body, actions } = shell(container, {
+      title: '🚴 Bike',
+      hint: 'Tap a steady rhythm. Keep the needle in the power band!',
+    });
+    const bandH = 30 * tier.window;      // band height in %
+    const bandBottom = 40;               // band sits mid-high — you have to work for it
+    body.innerHTML = `
+      <div class="cadence"><div class="band"></div><div class="needle"></div></div>
+      <div class="mini-timer"><div class="mini-timer-fill"></div></div>`;
+    const band = body.querySelector('.band');
+    band.style.bottom = bandBottom + '%';
+    band.style.height = bandH + '%';
+    const needle = body.querySelector('.needle');
+    const timerFill = body.querySelector('.mini-timer-fill');
+    const tap = bigButton('PEDAL');
+    actions.appendChild(tap);
+    tap.focus();
+
+    const duration = 6000;
+    const decayPerSec = 30 * tier.speed;
+    const perTap = 11;
+    let cadence = 0, inBand = 0, total = 0, done = false;
+    const start = performance.now();
+    let last = start;
+
+    const pedal = () => { cadence = Math.min(100, cadence + perTap); pulse(tap); };
+    tap.addEventListener('pointerdown', e => { e.preventDefault(); pedal(); });
+    tap.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') pedal(); });
+
+    function frame(now) {
+      if (done) return;
+      const dt = (now - last) / 1000; last = now;
+      cadence = Math.max(0, cadence - decayPerSec * dt);
+      needle.style.bottom = cadence + '%';
+      const inside = cadence >= bandBottom && cadence <= bandBottom + bandH;
+      band.classList.toggle('lit', inside);
+      total += dt;
+      if (inside) inBand += dt;
+      const elapsed = now - start;
+      timerFill.style.width = Math.max(0, 100 - (elapsed / duration) * 100) + '%';
+      if (elapsed >= duration) {
+        done = true;
+        const q = Math.min(1, (inBand / total) * 1.25); // 80% in-band = perfect — full 100% is inhuman
+        endFlash(el, q, () => { el.remove(); resolve(floored(q, tier)); });
+        return;
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  });
+}
+
+/* ---------------- CIRCUIT — reflex whack ----------------
+   Feel: CHAOS. Pads light up on a 3×3 grid; whack them before they fade. 8 pads. */
+export function circuitGame(container, tier) {
+  return new Promise(resolve => {
+    const { el, body } = shell(container, {
+      title: '⚡ Circuit',
+      hint: 'Whack the lit pads before they fade! 8 rounds.',
+    });
+    body.innerHTML = `<div class="whack-grid">${'<button class="pad" type="button"></button>'.repeat(9)}</div>
+      <div class="stride-dots whack-dots">${'<span class="sdot"></span>'.repeat(8)}</div>`;
+    const pads = [...body.querySelectorAll('.pad')];
+    const dots = [...body.querySelectorAll('.sdot')];
+
+    const litFor = (reduced() ? 1400 : 1000) / tier.speed * (0.6 + tier.window * 0.4);
+    const gap = 260 / tier.speed;
+    const rounds = 8;
+    let round = 0, hits = 0, speedSum = 0, active = -1, litAt = 0, timer = null, done = false;
+
+    pads.forEach((p, i) => p.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      if (done || i !== active) { if (!done) p.classList.add('wrong'); setTimeout(() => p.classList.remove('wrong'), 200); return; }
+      clearTimeout(timer);
+      hits += 1;
+      speedSum += Math.max(0, 1 - (performance.now() - litAt) / litFor); // faster whack = more credit
+      p.classList.remove('lit'); p.classList.add('smacked');
+      setTimeout(() => p.classList.remove('smacked'), 220);
+      dots[round - 1].classList.add('hit');
+      next();
+    }));
+
+    function next() {
+      if (round >= rounds) return finish();
+      round += 1;
+      setTimeout(() => {
+        if (done) return;
+        let idx;
+        do { idx = Math.floor(Math.random() * 9); } while (idx === active);
+        active = idx;
+        litAt = performance.now();
+        pads[idx].classList.add('lit');
+        timer = setTimeout(() => { // faded — miss
+          pads[idx].classList.remove('lit');
+          dots[round - 1].classList.add('miss');
+          active = -1;
+          next();
+        }, litFor);
+      }, gap);
+    }
+    next();
+
+    function finish() {
+      done = true; active = -1;
+      // 60% for landing hits at all, 40% for reaction speed
+      const q = (hits / rounds) * 0.6 + (hits ? (speedSum / rounds) : 0) * 0.4 + (hits === rounds ? 0.1 : 0);
+      endFlash(el, q, () => { el.remove(); resolve(floored(Math.min(1, q), tier)); });
+    }
+  });
+}
+
+export const GAMES = {
+  weights: weightsGame,
+  treadmill: treadmillGame,
+  bike: bikeGame,
+  circuit: circuitGame,
+};
+
+/* ---------- shared juice ---------- */
+function pulse(btn) {
+  btn.classList.remove('pulse');
+  void btn.offsetWidth; // restart animation
+  btn.classList.add('pulse');
+}
+
+function endFlash(el, q, cb) {
+  const grade = q >= 0.85 ? 'PERFECT!' : q >= 0.6 ? 'STRONG!' : q >= 0.35 ? 'DECENT' : 'ROUGH…';
+  const flash = document.createElement('div');
+  flash.className = 'mini-grade ' + (q >= 0.6 ? 'good' : 'meh');
+  flash.textContent = grade;
+  el.appendChild(flash);
+  setTimeout(cb, reduced() ? 350 : 800);
+}
