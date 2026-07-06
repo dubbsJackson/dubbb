@@ -58,7 +58,8 @@ export function weightsGame(container, tier) {
 
     function frame(now) {
       if (done) return;
-      const dt = (now - last) / 1000; last = now;
+      // clamp dt: a backgrounded tab (portal iframe) pauses rAF — don't dump the gap on the player
+      const dt = Math.min(0.1, (now - last) / 1000); last = now;
       power = Math.max(0, power - drainPerSec * dt);
       if (power >= 99 && topAt == null) topAt = now;
       fill.style.height = power + '%';
@@ -178,7 +179,8 @@ export function bikeGame(container, tier) {
 
     function frame(now) {
       if (done) return;
-      const dt = (now - last) / 1000; last = now;
+      // clamp dt: a backgrounded tab (portal iframe) pauses rAF — don't dump the gap on the player
+      const dt = Math.min(0.1, (now - last) / 1000); last = now;
       cadence = Math.max(0, cadence - decayPerSec * dt);
       needle.style.bottom = cadence + '%';
       const inside = cadence >= bandBottom && cadence <= bandBottom + bandH;

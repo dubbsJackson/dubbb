@@ -9,6 +9,7 @@ import { GAMES } from './challenges.js';
 import { loadBoard, submitScore, ranked } from './leaderboard.js';
 import { catalog, premiumTeaser, crossSellUrl } from './economy.js';
 import { saveGame, loadGame, clearGame, loadSettings, saveSettings, store } from './save.js';
+import { platform } from './platform.js';
 
 const app = document.getElementById('app');
 let S = null;                    // live run state
@@ -60,8 +61,10 @@ async function saveCareer(c) { await store.setJSON('career', c); }
 
 /* ---------- boot ---------- */
 async function boot() {
+  await platform.init();
   settings = await loadSettings();
-  screenSplash();
+  await screenSplash();
+  platform.loadingFinished();
 }
 
 /* =================================================================
@@ -100,7 +103,7 @@ async function screenSplash() {
     }, 420);
   }
 
-  if (saved) on(app, '#continue', () => { S = saved; sfx.good(); screenHub(); });
+  if (saved) on(app, '#continue', () => { S = saved; sfx.good(); platform.gameplayStart(); screenHub(); });
   on(app, '#start', async () => {
     sfx.tap();
     if (saved && !confirm('Start over? Your current run will be replaced.')) return;
@@ -261,7 +264,7 @@ async function startRun(profile, avatar, prestige = false) {
   };
   S.lastMilestone = snapshot();
   autosave();
-  screenIntro(() => screenHub(), `Begin Day 1 →`);
+  screenIntro(() => { platform.gameplayStart(); screenHub(); }, `Begin Day 1 →`);
 }
 
 const snapshot = () => ({
@@ -482,6 +485,7 @@ function screenFood() {
 ================================================================= */
 async function endDay() {
   const trained = S.trainedToday;
+  await platform.commercialBreak(); // natural pause point; no-op without a platform SDK
   const events = advanceDay(S);
   const c = await career();
   if (S.bestStreak > c.bestStreak) { c.bestStreak = S.bestStreak; await saveCareer(c); }
@@ -544,6 +548,8 @@ function screenMilestone() {
    10 · WIN / LOSE + leaderboard submit + cross-sell + prestige
 ================================================================= */
 async function screenGameOver(won) {
+  platform.gameplayStop();
+  if (won) platform.happytime();
   const ps = physiqueScore(S.stats, S.weights);
   const score = finalScore(S);
   if (won) {
