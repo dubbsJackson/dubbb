@@ -1,8 +1,11 @@
 # Temporary utility: downloads the Higgsfield-generated art for the game into
-# game/assets/raw/ and commits it to this branch. Dispatched once, then removed
-# (the Claude Code sandbox can't reach the CDN directly, but Actions runners can).
+# game/assets/raw/ and commits it back to this branch, then becomes a no-op.
+# Removed once the assets are vendored (the Claude Code sandbox can't reach the
+# CDN directly, but Actions runners can).
 name: fetch-game-assets
-on: workflow_dispatch
+on:
+  push:
+    branches: [claude/claude-connector-completion-69tmx7]
 permissions:
   contents: write
 jobs:
@@ -10,9 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Download generated art
+      - name: Download generated art and commit
         run: |
           set -euo pipefail
+          if [ -d game/assets/raw ]; then echo "assets already fetched — nothing to do"; exit 0; fi
           mkdir -p game/assets/raw
           base="https://d8j0ntlcm91z4.cloudfront.net/user_2vhLybIsQFgOBk9vfUszUKMb1zW"
           curl -fsSL -o game/assets/raw/hero.png        "$base/hf_20260706_000113_c0851511-117e-47ea-bf82-3f5854c0636e.png"
@@ -29,10 +33,8 @@ jobs:
           curl -fsSL -o game/assets/raw/icon-bike.webp      "$base/hf_20260706_000139_b1a2405b-1546-43d0-8254-aa99150a3582_min.webp"
           curl -fsSL -o game/assets/raw/icon-circuit.webp   "$base/hf_20260706_000141_b6f727b7-e790-4e05-bdff-fba6efcde608_min.webp"
           ls -la game/assets/raw
-      - name: Commit assets
-        run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add game/assets/raw
-          git commit -m "Fetch Higgsfield-generated game art (raw, pre-optimization)"
+          git commit -m "Fetch Higgsfield-generated game art (raw, pre-optimization) [skip ci]"
           git push
