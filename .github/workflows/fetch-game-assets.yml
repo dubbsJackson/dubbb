@@ -1,0 +1,38 @@
+# Temporary utility: downloads the Higgsfield-generated art for the game into
+# game/assets/raw/ and commits it to this branch. Dispatched once, then removed
+# (the Claude Code sandbox can't reach the CDN directly, but Actions runners can).
+name: fetch-game-assets
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download generated art
+        run: |
+          set -euo pipefail
+          mkdir -p game/assets/raw
+          base="https://d8j0ntlcm91z4.cloudfront.net/user_2vhLybIsQFgOBk9vfUszUKMb1zW"
+          curl -fsSL -o game/assets/raw/hero.png        "$base/hf_20260706_000113_c0851511-117e-47ea-bf82-3f5854c0636e.png"
+          curl -fsSL -o game/assets/raw/gym-easy.png    "$base/hf_20260706_000116_74f25647-c65a-48dd-954b-7274bc53c32d.png"
+          curl -fsSL -o game/assets/raw/gym-medium.png  "$base/hf_20260706_000119_edb14e4c-c179-49c8-b200-b85333ffc059.png"
+          curl -fsSL -o game/assets/raw/gym-hard.png    "$base/hf_20260706_000122_ef61e3ca-ff37-4464-8668-33c51ac3ce23.png"
+          curl -fsSL -o game/assets/raw/food.png        "$base/hf_20260706_000124_885cf2eb-c1e7-4117-88f2-c7bc8bc41e5f.png"
+          curl -fsSL -o game/assets/raw/icon-weights.svg    "$base/hf_20260706_000135_d32adfef-0ac6-4942-99b7-3c6ae152a2be.svg"
+          curl -fsSL -o game/assets/raw/icon-treadmill.svg  "$base/hf_20260706_000137_5f13b754-c8c6-41ac-b2b7-718a06f32e62.svg"
+          curl -fsSL -o game/assets/raw/icon-bike.svg       "$base/hf_20260706_000139_b1a2405b-1546-43d0-8254-aa99150a3582.svg"
+          curl -fsSL -o game/assets/raw/icon-circuit.svg    "$base/hf_20260706_000141_b6f727b7-e790-4e05-bdff-fba6efcde608.svg"
+          curl -fsSL -o game/assets/raw/icon-weights.webp   "$base/hf_20260706_000135_d32adfef-0ac6-4942-99b7-3c6ae152a2be_min.webp"
+          curl -fsSL -o game/assets/raw/icon-treadmill.webp "$base/hf_20260706_000137_5f13b754-c8c6-41ac-b2b7-718a06f32e62_min.webp"
+          curl -fsSL -o game/assets/raw/icon-bike.webp      "$base/hf_20260706_000139_b1a2405b-1546-43d0-8254-aa99150a3582_min.webp"
+          curl -fsSL -o game/assets/raw/icon-circuit.webp   "$base/hf_20260706_000141_b6f727b7-e790-4e05-bdff-fba6efcde608_min.webp"
+          ls -la game/assets/raw
+      - name: Commit assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add game/assets/raw
+          git commit -m "Fetch Higgsfield-generated game art (raw, pre-optimization)"
+          git push
