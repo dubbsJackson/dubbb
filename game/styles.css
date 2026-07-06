@@ -349,6 +349,53 @@ button { font: inherit; color: inherit; }
 }
 .toast.show { transform: translateX(-50%) translateY(0); }
 
+/* ---------- generated art (Higgsfield pass — see game/assets) ----------
+   Backgrounds layer under a dark gradient so HUD/avatars stay readable;
+   if an image ever fails to load, the original flat panel shows through. */
+.stage.bg-hero, .stage.bg-easy, .stage.bg-medium, .stage.bg-hard {
+  background-color: var(--ink);
+  background-size: cover;
+  background-position: center bottom;
+}
+.stage.bg-hero { background-image: linear-gradient(rgba(12, 10, 31, .25), rgba(12, 10, 31, .55)), url('./assets/bg-hero.webp'); }
+.stage.bg-easy { background-image: linear-gradient(rgba(12, 10, 31, .30), rgba(12, 10, 31, .55)), url('./assets/bg-gym-easy.webp'); }
+.stage.bg-medium { background-image: linear-gradient(rgba(12, 10, 31, .30), rgba(12, 10, 31, .55)), url('./assets/bg-gym-medium.webp'); }
+.stage.bg-hard { background-image: linear-gradient(rgba(12, 10, 31, .30), rgba(12, 10, 31, .55)), url('./assets/bg-gym-hard.webp'); }
+
+.food-banner {
+  height: 92px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  margin-bottom: 12px;
+  background-color: var(--ink);
+  background-image: linear-gradient(rgba(12, 10, 31, .2), rgba(12, 10, 31, .4)), url('./assets/bg-food.webp');
+  background-size: cover;
+  background-position: center;
+}
+
+.place.tier-easy, .place.tier-medium, .place.tier-hard, .place.type-food {
+  background-color: var(--ink3);
+  background-size: cover;
+  background-position: center;
+}
+.place.tier-easy { background-image: linear-gradient(rgba(12, 10, 31, .72), rgba(12, 10, 31, .88)), url('./assets/bg-gym-easy.webp'); }
+.place.tier-medium { background-image: linear-gradient(rgba(12, 10, 31, .72), rgba(12, 10, 31, .88)), url('./assets/bg-gym-medium.webp'); }
+.place.tier-hard { background-image: linear-gradient(rgba(12, 10, 31, .72), rgba(12, 10, 31, .88)), url('./assets/bg-gym-hard.webp'); }
+.place.type-food { background-image: linear-gradient(rgba(12, 10, 31, .72), rgba(12, 10, 31, .88)), url('./assets/bg-food.webp'); }
+
+.act.m-act { display: flex; align-items: center; gap: 10px; }
+.m-ico {
+  width: 44px; height: 44px; flex: 0 0 auto;
+  border-radius: 11px; border: 1px solid var(--line);
+  background-color: var(--ink2);
+  background-size: cover; background-position: center;
+}
+.ico-weights { background-image: url('./assets/icon-weights.webp'); }
+.ico-treadmill { background-image: url('./assets/icon-treadmill.webp'); }
+.ico-bike { background-image: url('./assets/icon-bike.webp'); }
+.ico-circuit { background-image: url('./assets/icon-circuit.webp'); }
+.m-txt { min-width: 0; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }

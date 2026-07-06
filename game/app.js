@@ -72,7 +72,7 @@ async function screenSplash() {
   app.innerHTML = `
     ${brand}
     <div class="tag">${CONFIG.targetDays}-DAY TRANSFORMATION CHALLENGE</div>
-    <div class="stage splash-stage"><div class="avatar-wrap" id="titleAv"></div></div>
+    <div class="stage splash-stage bg-hero"><div class="avatar-wrap" id="titleAv"></div></div>
     <h1 class="hero-title">Build the body.<br><em>Beat the streak.</em></h1>
     <p class="sub">Train, eat, and grind day by day. Watch your body transform. Skip days and momentum stalls — come back and get a bonus. Hit your goal body before day ${CONFIG.targetDays}.</p>
     ${saved ? `<button class="btn mint" id="continue">Continue — Day ${saved.day}</button>` : ''}
@@ -301,7 +301,7 @@ function hudHTML() {
       ${S.prestige ? '<div class="prestige-pip">★ PRESTIGE</div>' : ''}
       <div class="streak">🔥 ${S.streak}</div>
     </div>
-    <div class="stage">
+    <div class="stage bg-hero">
       <div class="avatar-wrap" id="hubAv">${avatarSVG(S.avatar, S.stats.muscle, S.stats.lean, { width: 128, height: 170 })}</div>
       <div class="physique">
         <div class="bar"><div class="fill" style="width:${Math.min(100, ps / goal * 100)}%"></div></div>
@@ -359,7 +359,7 @@ function screenMap() {
     <div class="tag">🗺️ THE STRIP · TAP TO TRAVEL</div>
     <div class="map-grid">
       ${PLACES.map(p => `
-        <button class="place${p.tier ? ' tier-' + p.tier : ''}" data-id="${p.id}">
+        <button class="place${p.tier ? ' tier-' + p.tier : ''} type-${p.type}" data-id="${p.id}">
           <span class="p-ico">${p.icon}</span>
           <span class="p-lbl">${p.lbl}</span>
           <span class="p-desc">${p.desc}</span>
@@ -401,13 +401,16 @@ function screenGym(tierId) {
       <div class="e-lbl">ENERGY</div>
       <div class="energy">${Array.from({ length: CONFIG.energyPerDay }, (_, i) => `<div class="pip${i < S.energy ? ' on' : ''}"></div>`).join('')}</div>
     </div>
-    <div class="stage gym-stage"><div class="avatar-wrap" id="gymAv">${avatarSVG(S.avatar, S.stats.muscle, S.stats.lean, { width: 110, height: 150 })}</div></div>
+    <div class="stage gym-stage bg-${tierId}"><div class="avatar-wrap" id="gymAv">${avatarSVG(S.avatar, S.stats.muscle, S.stats.lean, { width: 110, height: 150 })}</div></div>
     <div class="actions" id="machines">
       ${MACHINES.map(m => `
-        <button class="act${S.energy < 1 ? ' locked' : ''}" data-id="${m.id}">
+        <button class="act m-act${S.energy < 1 ? ' locked' : ''}" data-id="${m.id}">
           <div class="cost">⚡1</div>
-          <div class="an">${m.icon} ${m.lbl}</div>
-          <div class="ad">${m.desc}</div>
+          <span class="m-ico ico-${m.id}" aria-hidden="true"></span>
+          <div class="m-txt">
+            <div class="an">${m.lbl}</div>
+            <div class="ad">${m.desc}</div>
+          </div>
         </button>`).join('')}
     </div>
     <div class="foot">
@@ -439,6 +442,7 @@ function screenFood() {
   app.innerHTML = `
     ${brand}
     <div class="tag">🥗 FOOD COURT</div>
+    <div class="food-banner" role="img" aria-label="The neon food court at night"></div>
     <div class="energy-row">
       <div class="e-lbl">ENERGY</div>
       <div class="energy">${Array.from({ length: CONFIG.energyPerDay }, (_, i) => `<div class="pip${i < S.energy ? ' on' : ''}"></div>`).join('')}</div>
