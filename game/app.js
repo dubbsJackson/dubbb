@@ -2,7 +2,7 @@
    Screens are plain functions that render into #app; state mutations go
    through progress.js pure functions and autosave via save.js. */
 
-import { CONFIG, PLACES, MACHINES, FOODS, FRAMES } from './data.js';
+import { CONFIG, PLACES, MACHINES, FOODS, FRAMES, GENDERS } from './data.js';
 import { defaultAvatar, avatarSVG, SKIN_TONES, HAIRS, OUTFITS, byId } from './avatar.js';
 import { goalWeights, physiqueScore, currentWeight, workoutGains, applyWorkout, applyFood, advanceDay, finalScore, momentumMult } from './progress.js';
 import { GAMES } from './challenges.js';
@@ -127,28 +127,20 @@ function screenSetup() {
     <div class="tag">PROFILE SETUP</div>
     <label class="field-lbl" for="pname">Your name</label>
     <input class="name-input" id="pname" maxlength="14" placeholder="e.g. FlexMachine" autocomplete="off"/>
-    <label class="field-lbl">Challenge length</label>
-    <div class="grid2" id="days">
-      <button class="choice" data-d="15" type="button"><div class="lbl">15-Day Sprint</div><div class="desc">Fast + intense.</div></button>
-      <button class="choice sel" data-d="30" type="button"><div class="lbl">30-Day Classic</div><div class="desc">The real transformation arc.</div></button>
+    <div class="challenge-card">
+      <div class="cc-days">${CONFIG.targetDays}</div>
+      <div class="cc-txt"><b>Day Transformation</b><span>Build your dream body before the month is out.</span></div>
     </div>
     <label class="check-row"><input type="checkbox" id="age"/> I'm 13 or older</label>
     <label class="check-row dim"><input type="checkbox" id="notif"/> Remind me to keep my streak (coming soon)</label>
     <button class="btn mint" id="go">Create My Athlete →</button>
     <button class="btn ghost small" id="back">Back</button>`;
 
-  let days = 30;
-  app.querySelectorAll('#days .choice').forEach(c => c.addEventListener('click', () => {
-    app.querySelectorAll('#days .choice').forEach(x => x.classList.remove('sel'));
-    c.classList.add('sel');
-    days = +c.dataset.d;
-    sfx.tap();
-  }));
   on(app, '#go', () => {
     if (!app.querySelector('#age').checked) return toast('Please confirm you are 13 or older.');
     const name = (app.querySelector('#pname').value || 'You').trim().slice(0, 14) || 'You';
     sfx.good();
-    screenAvatarCreator({ name, targetDays: days });
+    screenAvatarCreator({ name, targetDays: CONFIG.targetDays });
   });
   on(app, '#back', screenSplash);
 }
@@ -163,24 +155,15 @@ function screenAvatarCreator(profile, existingAvatar = null, prestige = false) {
   app.innerHTML = `
     ${brand}
     <div class="tag">CREATE YOUR ATHLETE</div>
+    <div class="gender-row" id="genders"></div>
     <div class="stage creator-stage"><div class="avatar-wrap" id="preview"></div></div>
     <div class="creator-rows">
       <div class="c-row"><div class="c-lbl">Skin</div><div class="swatches" id="skins"></div></div>
       <div class="c-row"><div class="c-lbl">Hair</div><div class="chip-row" id="hairs"></div></div>
       <div class="c-row"><div class="c-lbl">Outfit</div><div class="swatches" id="outfits"></div></div>
     </div>
-    <label class="field-lbl">Body frame</label>
+    <label class="field-lbl">Starting size</label>
     <div class="grid2" id="frames"></div>
-    <div class="weights-row">
-      <div class="w-field">
-        <label class="field-lbl" for="sw">Start weight</label>
-        <div class="stepper"><button type="button" data-t="sw" data-v="-5">−</button><span id="swv"></span><button type="button" data-t="sw" data-v="5">+</button></div>
-      </div>
-      <div class="w-field">
-        <label class="field-lbl" for="gw">Goal weight</label>
-        <div class="stepper"><button type="button" data-t="gw" data-v="-5">−</button><span id="gwv"></span><button type="button" data-t="gw" data-v="5">+</button></div>
-      </div>
-    </div>
     <p class="note" id="goalNote"></p>
     <button class="btn mint" id="go">Lock It In →</button>
     <button class="btn ghost small" id="back">Back</button>`;
@@ -188,16 +171,18 @@ function screenAvatarCreator(profile, existingAvatar = null, prestige = false) {
   const preview = app.querySelector('#preview');
   const draw = () => {
     const f = frame();
-    preview.innerHTML = avatarSVG(av, f.muscle, f.lean, { width: 140, height: 185 });
-    app.querySelector('#swv').textContent = av.startWeight + ' lb';
-    app.querySelector('#gwv').textContent = av.goalWeight + ' lb';
-    const d = av.goalWeight - av.startWeight;
+    const st = startingStats(av, f);
+    preview.innerHTML = avatarSVG(av, st.muscle, st.lean, { width: 140, height: 185 });
     app.querySelector('#goalNote').textContent =
-      d < -8 ? 'Cutting plan: leanness counts extra toward your goal body.' :
-      d > 8 ? 'Bulking plan: muscle counts extra toward your goal body.' :
-      'Recomp plan: muscle and leanness count equally.';
+      `Start ${av.startWeight} lb → goal ${av.goalWeight} lb · ${av.gender === 'woman' ? 'round now, slender & athletic by day 30.' : 'sculpt it ripped by day 30.'}`;
   };
 
+  const genders = app.querySelector('#genders');
+  GENDERS.forEach(g => {
+    const b = el(`<button class="gsel${g.id === av.gender ? ' sel' : ''}" type="button">${g.id === 'woman' ? '♀' : '♂'} ${g.lbl}</button>`);
+    b.addEventListener('click', () => { av.gender = g.id; sel(genders, b); sfx.tap(); draw(); });
+    genders.appendChild(b);
+  });
   const skins = app.querySelector('#skins');
   SKIN_TONES.forEach(t => {
     const b = el(`<button class="swatch${t.id === av.skinTone ? ' sel' : ''}" type="button" aria-label="Skin tone ${t.id}" style="background:${t.c}"></button>`);
@@ -219,15 +204,16 @@ function screenAvatarCreator(profile, existingAvatar = null, prestige = false) {
   const frames = app.querySelector('#frames');
   FRAMES.forEach(f => {
     const b = el(`<button class="choice${f.id === av.bodyFrame ? ' sel' : ''}" type="button"><div class="lbl">${f.lbl}</div><div class="desc">${f.desc}</div></button>`);
-    b.addEventListener('click', () => { av.bodyFrame = f.id; sel(frames, b); sfx.tap(); draw(); });
+    b.addEventListener('click', () => {
+      av.bodyFrame = f.id;
+      av.startWeight = f.startWeight;
+      av.goalWeight = f.goalWeight;
+      sel(frames, b); sfx.tap(); draw();
+    });
     frames.appendChild(b);
   });
-  app.querySelectorAll('.stepper button').forEach(b => b.addEventListener('click', () => {
-    const v = +b.dataset.v;
-    if (b.dataset.t === 'sw') av.startWeight = Math.max(90, Math.min(400, av.startWeight + v));
-    else av.goalWeight = Math.max(90, Math.min(400, av.goalWeight + v));
-    sfx.tap(); draw();
-  }));
+  // make sure weights match the (possibly default) selected frame on first paint
+  const f0 = frame(); av.startWeight = f0.startWeight; av.goalWeight = f0.goalWeight;
   function sel(wrap, b) { [...wrap.children].forEach(c => c.classList.remove('sel')); b.classList.add('sel'); }
 
   draw();
@@ -238,11 +224,23 @@ function screenAvatarCreator(profile, existingAvatar = null, prestige = false) {
 /* =================================================================
    START A RUN
 ================================================================= */
+// A woman starts a little rounder (lower leanness) so she visibly slims down
+// into a slender, athletic build across the run. Men start per the frame.
+function startingStats(avatar, f) {
+  let muscle = f.muscle, lean = f.lean;
+  // Woman starts rounder (lower leanness) but with a touch more starting tone, so her
+  // physique score starts level with the man's — same 30-day pace — while she visibly
+  // slims from round to slender/athletic as leanness climbs.
+  if (avatar.gender === 'woman') { muscle = Math.min(1, muscle + 0.05); lean = Math.max(0.05, lean - 0.05); }
+  return { muscle, lean };
+}
+
 async function startRun(profile, avatar, prestige = false) {
   const f = byId(FRAMES, avatar.bodyFrame);
+  const st = startingStats(avatar, f);
   const weights = goalWeights(avatar);
   const c = await career();
-  avatar.startPhysique = physiqueScore({ muscle: f.muscle, lean: f.lean }, weights);
+  avatar.startPhysique = physiqueScore(st, weights);
   S = {
     profile,
     avatar,
@@ -250,7 +248,7 @@ async function startRun(profile, avatar, prestige = false) {
     targetDays: profile.targetDays || CONFIG.targetDays,
     day: 1,
     energy: CONFIG.energyPerDay,
-    stats: { muscle: f.muscle, lean: f.lean, strength: Math.round(f.muscle * 30), stamina: Math.round(f.lean * 30) },
+    stats: { muscle: st.muscle, lean: st.lean, strength: Math.round(st.muscle * 30), stamina: Math.round(st.lean * 30) },
     momentum: CONFIG.momentum.start,
     score: 0,
     streak: 0,
@@ -259,6 +257,7 @@ async function startRun(profile, avatar, prestige = false) {
     trainedToday: false,
     restedToday: false,
     comebackPending: false,
+    dayGain: 0,
     prestige,
     lastMilestone: null,
   };
@@ -495,8 +494,9 @@ function screenGym(tierId) {
     const machine = MACHINES.find(m => m.id === b.dataset.id);
     S.energy -= 1;
     sfx.tap();
-    const stage = app.querySelector('.gym-stage');
-    const quality = await GAMES[machine.game](stage, tier);
+    // mini-games overlay the whole card (not just the small avatar stage) so
+    // taller games like pull-ups have room and never overlap the machine tiles
+    const quality = await GAMES[machine.game](app, tier);
     const gains = workoutGains(S, machine, quality, tier);
     applyWorkout(S, gains);
     autosave();

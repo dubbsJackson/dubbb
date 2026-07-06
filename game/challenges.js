@@ -201,62 +201,78 @@ export function bikeGame(container, tier) {
   });
 }
 
-/* ---------------- CIRCUIT — reflex whack ----------------
-   Feel: CHAOS. Pads light up on a 3×3 grid; whack them before they fade. 8 pads. */
-export function circuitGame(container, tier) {
+/* ---------------- PULL-UPS — up/down rhythm ----------------
+   Feel: EASY & satisfying. Two targets, UP and DOWN. Tap the glowing one to haul
+   the climber up, then down — each full up-down is one rep. No timing windows to
+   miss; more reps in the window = better. The un-loseable strength builder. */
+export function pullupGame(container, tier) {
   return new Promise(resolve => {
-    const { el, body } = shell(container, {
-      title: '⚡ Circuit',
-      hint: 'Whack the lit pads before they fade! 8 rounds.',
+    const { el, body, actions } = shell(container, {
+      title: '🧗 Pull-ups',
+      hint: 'Tap the glowing target — UP, then DOWN. Rack up reps!',
     });
-    body.innerHTML = `<div class="whack-grid">${'<button class="pad" type="button"></button>'.repeat(9)}</div>
-      <div class="stride-dots whack-dots">${'<span class="sdot"></span>'.repeat(8)}</div>`;
-    const pads = [...body.querySelectorAll('.pad')];
-    const dots = [...body.querySelectorAll('.sdot')];
+    body.innerHTML = `
+      <div class="pullbar">
+        <div class="pullbar-rail"></div>
+        <div class="climber down" id="climber">🧗</div>
+      </div>
+      <div class="mini-timer"><div class="mini-timer-fill"></div></div>
+      <div class="prep">REPS <b id="prepn">0</b></div>`;
+    const upBtn = bigButton('▲ UP');
+    const downBtn = bigButton('▼ DOWN');
+    upBtn.classList.add('ptar');
+    downBtn.classList.add('ptar');
+    actions.appendChild(upBtn);
+    actions.appendChild(downBtn);
 
-    const litFor = (reduced() ? 1400 : 1000) / tier.speed * (0.6 + tier.window * 0.4);
-    const gap = 260 / tier.speed;
-    const rounds = 8;
-    let round = 0, hits = 0, speedSum = 0, active = -1, litAt = 0, timer = null, done = false;
+    const climber = body.querySelector('#climber');
+    const repn = body.querySelector('#prepn');
+    const timerFill = body.querySelector('.mini-timer-fill');
 
-    pads.forEach((p, i) => p.addEventListener('pointerdown', e => {
-      e.preventDefault();
-      if (done || i !== active) { if (!done) p.classList.add('wrong'); setTimeout(() => p.classList.remove('wrong'), 200); return; }
-      clearTimeout(timer);
-      hits += 1;
-      speedSum += Math.max(0, 1 - (performance.now() - litAt) / litFor); // faster whack = more credit
-      p.classList.remove('lit'); p.classList.add('smacked');
-      setTimeout(() => p.classList.remove('smacked'), 220);
-      dots[round - 1].classList.add('hit');
-      next();
-    }));
+    const duration = 7000;                                   // a relaxed 7s set
+    const targetReps = Math.max(4, Math.round(5 * tier.speed)); // easy 5, med ~7, hard ~8 (rule 5 scaling)
+    let reps = 0, expected = 'up', done = false;
+    const start = performance.now();
 
-    function next() {
-      if (round >= rounds) return finish();
-      round += 1;
-      setTimeout(() => {
-        if (done) return;
-        let idx;
-        do { idx = Math.floor(Math.random() * 9); } while (idx === active);
-        active = idx;
-        litAt = performance.now();
-        pads[idx].classList.add('lit');
-        timer = setTimeout(() => { // faded — miss
-          pads[idx].classList.remove('lit');
-          dots[round - 1].classList.add('miss');
-          active = -1;
-          next();
-        }, litFor);
-      }, gap);
+    function setActive() {
+      upBtn.classList.toggle('active', expected === 'up');
+      downBtn.classList.toggle('active', expected === 'down');
     }
-    next();
+    setActive();
+    upBtn.focus();
 
-    function finish() {
-      done = true; active = -1;
-      // 60% for landing hits at all, 40% for reaction speed
-      const q = (hits / rounds) * 0.6 + (hits ? (speedSum / rounds) : 0) * 0.4 + (hits === rounds ? 0.1 : 0);
-      endFlash(el, q, () => { el.remove(); resolve(floored(Math.min(1, q), tier)); });
+    function hit(pos) {
+      if (done) return;
+      if (pos !== expected) { pulse(pos === 'up' ? upBtn : downBtn); return; } // wrong target: no penalty, just no rep
+      if (pos === 'up') {
+        climber.classList.remove('down'); climber.classList.add('up');
+        expected = 'down';
+      } else {
+        climber.classList.remove('up'); climber.classList.add('down');
+        expected = 'up';
+        reps += 1; repn.textContent = reps;
+      }
+      pulse(pos === 'up' ? upBtn : downBtn);
+      setActive();
     }
+    upBtn.addEventListener('pointerdown', e => { e.preventDefault(); hit('up'); });
+    downBtn.addEventListener('pointerdown', e => { e.preventDefault(); hit('down'); });
+    upBtn.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowUp') { e.preventDefault(); hit('up'); } });
+    downBtn.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowDown') { e.preventDefault(); hit('down'); } });
+
+    function frame(now) {
+      if (done) return;
+      const elapsed = now - start;
+      timerFill.style.width = Math.max(0, 100 - (elapsed / duration) * 100) + '%';
+      if (elapsed >= duration) {
+        done = true;
+        const q = Math.min(1, reps / targetReps);
+        endFlash(el, q, () => { el.remove(); resolve(floored(q, tier)); });
+        return;
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
   });
 }
 
@@ -264,7 +280,7 @@ export const GAMES = {
   weights: weightsGame,
   treadmill: treadmillGame,
   bike: bikeGame,
-  circuit: circuitGame,
+  pullups: pullupGame,
 };
 
 /* ---------- shared juice ---------- */

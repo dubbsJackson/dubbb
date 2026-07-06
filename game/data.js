@@ -2,10 +2,17 @@
    Balance numbers live HERE, never in logic. Comment the "why" on each. */
 
 export const CONFIG = {
-  targetDays: 30,          // the challenge length; win screen fires if goal hit before this
-  energyPerDay: 4,         // 4 actions/day ≈ 2 workouts + a meal + one experiment — short sessions, "fast not idle"
+  targetDays: 30,          // the only challenge length — a full 30-day transformation
+  energyPerDay: 4,         // 4 actions/day ≈ 2-3 workouts + a meal — short sessions, "fast not idle"
   milestoneEvery: 3,       // progress-photo cadence; 3 days = players see visible change every ~2 minutes of play
   goalPhysique: 80,        // physique score (0-100) that counts as "goal body"
+
+  // Pacing: the body can only change so fast, so each day caps how much physique
+  // you can add. This is what makes the goal take ALMOST the whole 30 days:
+  //   start physique ~30, goal 80 → +50 needed. At the cap that's ~26 days minimum,
+  //   so a player who maxes the cap every day (Beast Lab grinder) can finish ~day 26.
+  //   Anyone gaining a little under the cap lands closer to day 29-30. Slackers miss it.
+  dailyPhysiqueCap: 1.95,
 
   // Momentum: the soft carrot/stick. Multiplies all gains.
   momentum: {
@@ -24,19 +31,25 @@ export const CONFIG = {
   },
 
   // Stat → body mapping. Gains are per-workout at quality 1.0, momentum-neutral.
+  // Rates are tuned low on purpose: a single workout nudges the body a little, and
+  // the daily cap above bounds the rest — together they stretch the goal across the
+  // whole month (see dailyPhysiqueCap). Verified with tools/balance-sim.mjs.
   gains: {
-    muscleRate: 0.030,     // ~0.03/workout → visible bulk change every 2-3 workouts, goal reachable ~day 20 with decent play
-    leanRate: 0.030,
+    muscleRate: 0.0148,
+    leanRate: 0.0148,
     statPoints: 6,         // strength/stamina points per perfect workout
     scorePerQuality: 40,   // leaderboard points per workout, scaled by quality
     foodScore: 10,         // small score for eating (even junk gives 3) — every tap gives *something*
   },
 
   // Tier scaling: harder gyms = tighter windows + faster, bigger payout (rule 5).
+  // Payout spread is deliberately gentle now — the daily cap is the real pace-setter,
+  // so the Beast Lab edge comes from consistently MAXING the cap, not from a huge
+  // multiplier. That keeps the Beast grinder ~day 26 vs ~day 29-30 for steady play.
   tiers: {
-    easy:   { window: 1.0,  speed: 1.0,  payout: 1.0, floor: 0.5 },  // floor 0.5: first 3 min are un-loseable (rule 3)
-    medium: { window: 0.65, speed: 1.3,  payout: 1.5, floor: 0.25 },
-    hard:   { window: 0.42, speed: 1.65, payout: 2.2, floor: 0.1  },
+    easy:   { window: 1.0,  speed: 1.0,  payout: 1.0,  floor: 0.5 },  // floor 0.5: first 3 min are un-loseable (rule 3)
+    medium: { window: 0.65, speed: 1.3,  payout: 1.12, floor: 0.3 },
+    hard:   { window: 0.42, speed: 1.65, payout: 1.28, floor: 0.15 },
   },
 
   // Win/prestige
@@ -65,11 +78,17 @@ export const HAIRS = [
   { id: 'none',  lbl: 'Shaved', c: null },
 ];
 
+// Starting size. Frame sets the START weight (and the goal weight it's cutting toward).
+// muscle/lean are the man's starting composition; women start a touch rounder (see
+// startRun's gender modifier). Both start around physique 30 so the 26-day pace holds.
 export const FRAMES = [
-  { id: 'soft',    lbl: 'Soft Start', desc: 'Low muscle, higher fat. Big room to grow.', muscle: 0.18, lean: 0.25 },
-  { id: 'skinny',  lbl: 'Skinny',     desc: 'Lean but weak. Build size fast.',           muscle: 0.15, lean: 0.72 },
-  { id: 'average', lbl: 'Average',    desc: 'Balanced baseline. Steady gains.',          muscle: 0.35, lean: 0.45 },
-  { id: 'dadbod',  lbl: 'Dad Bod',    desc: 'Muscle under the fluff. Reveal it.',        muscle: 0.42, lean: 0.30 },
+  { id: 'big',    lbl: 'Big',    desc: 'Start at 200 lb. A solid base to sculpt.', startWeight: 200, goalWeight: 175, muscle: 0.30, lean: 0.30 },
+  { id: 'bigger', lbl: 'Bigger', desc: 'Start at 260 lb. The big transformation.',  startWeight: 260, goalWeight: 205, muscle: 0.33, lean: 0.27 },
+];
+
+export const GENDERS = [
+  { id: 'man',   lbl: 'Man' },
+  { id: 'woman', lbl: 'Woman' },
 ];
 
 export const OUTFITS = [
@@ -82,8 +101,8 @@ export const OUTFITS = [
 /* ---------- world map ---------- */
 export const PLACES = [
   { id: 'gym-easy',   lbl: 'Community Gym', icon: '🏋️', tier: 'easy',   type: 'gym',  desc: 'Forgiving machines. Learn the moves.' },
-  { id: 'gym-medium', lbl: 'Iron Temple',   icon: '🔩', tier: 'medium', type: 'gym',  desc: 'Tighter windows, 1.5× payout.' },
-  { id: 'gym-hard',   lbl: 'Beast Lab',     icon: '🦾', tier: 'hard',   type: 'gym',  desc: 'Brutal speed, 2.2× payout.' },
+  { id: 'gym-medium', lbl: 'Iron Temple',   icon: '🔩', tier: 'medium', type: 'gym',  desc: 'Tighter timing, bigger gains.' },
+  { id: 'gym-hard',   lbl: 'Beast Lab',     icon: '🦾', tier: 'hard',   type: 'gym',  desc: 'Brutal, but max daily gains. Train here daily to peak fastest.' },
   { id: 'food',       lbl: 'Food Court',    icon: '🥗', type: 'food',   desc: 'Fuel up — or fall for the junk.' },
   { id: 'rest',       lbl: 'Rest Area',     icon: '🛌', type: 'rest',   desc: 'Recover +1 energy (once a day).' },
   { id: 'arena',      lbl: 'Weekly Arena',  icon: '🏆', type: 'arena',  desc: 'The leaderboard. Where legends post.' },
@@ -100,9 +119,9 @@ export const MACHINES = [
   { id: 'bike',      lbl: 'Bike',      icon: '🚴', game: 'bike',
     desc: 'Hold a steady tap rhythm.', statFocus: 'stamina',
     gains: { muscle: 0.2, lean: 0.7, strength: 0.2, stamina: 1.0 } },
-  { id: 'circuit',   lbl: 'Circuit',   icon: '⚡', game: 'circuit',
-    desc: 'Whack the lit pads — fast.', statFocus: 'mixed',
-    gains: { muscle: 0.55, lean: 0.55, strength: 0.55, stamina: 0.55 }, momentumBonus: 4 },
+  { id: 'pullups',   lbl: 'Pull-ups',  icon: '🧗', game: 'pullups',
+    desc: 'Tap up, tap down — rep it out.', statFocus: 'strength',
+    gains: { muscle: 0.95, lean: 0.35, strength: 1.0, stamina: 0.3 }, momentumBonus: 4 },
 ];
 
 /* ---------- food ---------- */

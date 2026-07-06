@@ -6,13 +6,13 @@ import { CONFIG } from './data.js';
 
 /* ---------- physique ---------- */
 
-/* Goal weighting comes from which direction the player's weight goal points:
-   cutting (goal < start) favors lean, bulking favors muscle, recomp is even. */
+/* Goal weighting: what "the dream body" leans toward. Both genders need muscle AND
+   leanness high to score — you can't reach the goal by only lifting or only cutting.
+   Men tip slightly toward buff/ripped, women slightly toward slender/athletic. */
 export function goalWeights(avatar) {
-  const delta = avatar.goalWeight - avatar.startWeight;
-  if (delta < -8) return { muscle: 0.7, lean: 1.3 };   // cut
-  if (delta > 8) return { muscle: 1.3, lean: 0.7 };    // bulk
-  return { muscle: 1, lean: 1 };                        // recomp
+  return avatar.gender === 'woman'
+    ? { muscle: 0.9, lean: 1.1 }
+    : { muscle: 1.05, lean: 0.95 };
 }
 
 export function physiqueScore(stats, weights) {
@@ -66,9 +66,29 @@ export function workoutGains(state, machine, quality, tier) {
   };
 }
 
+const rawPhysique = (stats, w) => (stats.muscle * w.muscle + stats.lean * w.lean) / (w.muscle + w.lean) * 100;
+
 export function applyWorkout(state, gains) {
-  state.stats.muscle = clamp01(state.stats.muscle + gains.muscle);
-  state.stats.lean = clamp01(state.stats.lean + gains.lean);
+  // Daily physique cap: the body can only change so much per day. Scale the
+  // muscle/lean gains so today's total physique gain never exceeds the cap — this
+  // is the pace-setter that stretches the goal across the month. Strength, stamina,
+  // score and momentum are NOT capped, so extra workouts still pay off on the board.
+  const w = state.weights;
+  const before = rawPhysique(state.stats, w);
+  let nm = clamp01(state.stats.muscle + gains.muscle);
+  let nl = clamp01(state.stats.lean + gains.lean);
+  let delta = rawPhysique({ muscle: nm, lean: nl }, w) - before;
+  const remaining = Math.max(0, CONFIG.dailyPhysiqueCap - (state.dayGain || 0));
+  if (delta > remaining && delta > 0) {
+    const f = remaining / delta;
+    nm = clamp01(state.stats.muscle + gains.muscle * f);
+    nl = clamp01(state.stats.lean + gains.lean * f);
+    delta = rawPhysique({ muscle: nm, lean: nl }, w) - before;
+  }
+  state.stats.muscle = nm;
+  state.stats.lean = nl;
+  state.dayGain = (state.dayGain || 0) + Math.max(0, delta);
+
   state.stats.strength += gains.strength;
   state.stats.stamina += gains.stamina;
   state.score += gains.score;
@@ -119,6 +139,7 @@ export function advanceDay(state) {
   state.energy = CONFIG.energyPerDay;
   state.trainedToday = false;
   state.restedToday = false;
+  state.dayGain = 0; // reset the daily physique-gain budget
   if (state.comebackPending) {
     state.momentum = clampM(state.momentum + CONFIG.comeback.momentumBoost);
   }
