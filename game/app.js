@@ -334,7 +334,7 @@ function screenHub() {
     <div class="actions">
       <button class="act" id="gym"><div class="an">🏋️ Gym</div><div class="ad">Train — earn muscle, stats & points.</div></button>
       <button class="act" id="food"><div class="an">🥗 Food</div><div class="ad">Fuel momentum. Or don't.</div></button>
-      <button class="act" id="map"><div class="an">🗺️ Map</div><div class="ad">Travel: harder gyms, rest, arena.</div></button>
+      <button class="act" id="map"><div class="an">🗺️ The Strip</div><div class="ad">Walk to gyms, food, rest & arena.</div></button>
       <button class="act" id="lb"><div class="an">🏆 Ranks</div><div class="ad">Weekly leaderboard.</div></button>
       <button class="act" id="wardrobe"><div class="an">👕 Wardrobe</div><div class="ad">Cosmetics & passes.</div></button>
       <button class="act" id="stats"><div class="an">📊 Stats</div><div class="ad">Your journey so far.</div></button>
@@ -354,29 +354,99 @@ function screenHub() {
 }
 
 /* =================================================================
-   6 · MAP (tap-to-travel — rule 4)
+   6 · THE STRIP — walkable neighborhood
+   Your avatar strolls a neon plaza: tap the ground to walk anywhere,
+   tap a building to walk over and head inside. Buildings are real
+   buttons so keyboard users can enter them directly.
 ================================================================= */
+// building centers as % of the world box; door is a little below the facade
+const WORLD_POS = {
+  'gym-easy':   { x: 19, y: 22 },
+  'gym-medium': { x: 50, y: 16 },
+  'gym-hard':   { x: 81, y: 22 },
+  'food':       { x: 17, y: 52 },
+  'arena':      { x: 83, y: 52 },
+  'rest':       { x: 50, y: 68 },
+};
+
+function enterPlace(id) {
+  const p = PLACES.find(x => x.id === id);
+  if (!p) return;
+  if (p.type === 'gym') screenGym(p.tier);
+  else if (p.type === 'food') screenFood();
+  else if (p.type === 'rest') doRest();
+  else if (p.type === 'arena') screenLeaderboard(screenMap);
+}
+
 function screenMap() {
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   app.innerHTML = `
     ${brand}
-    <div class="tag">🗺️ THE STRIP · TAP TO TRAVEL</div>
-    <div class="map-grid">
-      ${PLACES.map(p => `
-        <button class="place${p.tier ? ' tier-' + p.tier : ''} type-${p.type}" data-id="${p.id}">
-          <span class="p-ico">${p.icon}</span>
-          <span class="p-lbl">${p.lbl}</span>
-          <span class="p-desc">${p.desc}</span>
-        </button>`).join('')}
+    <div class="tag">🚶 THE STRIP · WALK AROUND</div>
+    <div class="world" id="world">
+      ${PLACES.map(p => {
+        const pos = WORLD_POS[p.id];
+        const kind = p.type === 'gym' ? 'b-' + p.tier : 'b-' + p.type;
+        return `<button class="bldg ${kind}" data-id="${p.id}" style="left:${pos.x}%;top:${pos.y}%" aria-label="${p.lbl} — ${p.desc}">
+          <span class="b-face"><span class="b-emoji">${p.icon}</span></span>
+          <span class="b-tag">${p.lbl}</span>
+        </button>`;
+      }).join('')}
+      <div class="walker" id="walker" style="left:50%;top:90%">
+        <div class="walker-shadow"></div>
+        ${avatarSVG(S.avatar, S.stats.muscle, S.stats.lean, { width: 52, height: 70 })}
+      </div>
+      <div class="tap-hint" id="tapHint">tap to walk · tap a building to enter</div>
     </div>
-    <button class="btn ghost" id="back">← Home</button>`;
-  app.querySelectorAll('.place').forEach(b => b.addEventListener('click', () => {
-    const p = PLACES.find(x => x.id === b.dataset.id);
+    <button class="btn ghost" id="back">← Home</button>
+    <div class="note">Stroll the strip — tap the ground to walk, tap a building to go in.</div>`;
+
+  const world = app.querySelector('#world');
+  const walker = app.querySelector('#walker');
+  const hint = app.querySelector('#tapHint');
+  let busy = false;
+
+  function moveTo(x, y, thenId) {
+    const curX = parseFloat(walker.style.left);
+    const curY = parseFloat(walker.style.top);
+    walker.classList.toggle('flip', x < curX - 0.5);
+    const dist = Math.hypot(x - curX, y - curY);
+    const dur = reduce ? 0 : Math.min(1500, 200 + dist * 22);
+    walker.style.transition = dur ? `left ${dur}ms linear, top ${dur}ms linear` : 'none';
+    walker.classList.add('walking');
+    busy = true;
+    walker.style.left = x + '%';
+    walker.style.top = y + '%';
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      walker.classList.remove('walking');
+      busy = false;
+      walker.removeEventListener('transitionend', done);
+      if (thenId) enterPlace(thenId);
+    };
+    walker.addEventListener('transitionend', done);
+    setTimeout(done, dur + 80); // fallback (reduced motion / zero-distance taps)
+  }
+
+  world.addEventListener('pointerdown', e => {
+    if (e.target.closest('.bldg') || busy) return; // buildings handle their own taps
+    const r = world.getBoundingClientRect();
+    const x = Math.max(6, Math.min(94, ((e.clientX - r.left) / r.width) * 100));
+    const y = Math.max(42, Math.min(93, ((e.clientY - r.top) / r.height) * 100)); // stay on the floor band
+    if (hint) hint.classList.add('gone');
+    moveTo(x, y);
+  });
+
+  app.querySelectorAll('.bldg').forEach(b => b.addEventListener('click', () => {
+    if (busy) return;
+    const pos = WORLD_POS[b.dataset.id];
+    if (hint) hint.classList.add('gone');
     sfx.tap();
-    if (p.type === 'gym') screenGym(p.tier);
-    else if (p.type === 'food') screenFood();
-    else if (p.type === 'rest') doRest();
-    else if (p.type === 'arena') screenLeaderboard(screenMap);
+    moveTo(pos.x, Math.min(93, pos.y + 17), b.dataset.id); // walk to the doorway, then enter
   }));
+
   on(app, '#back', screenHub);
 }
 

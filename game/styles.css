@@ -221,22 +221,87 @@ button { font: inherit; color: inherit; }
 .rule b { color: var(--text); }
 .r-ico { font-size: 18px; flex: 0 0 auto; }
 
-/* ---------- map ---------- */
-.map-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
-.place {
-  background: var(--ink3); border: 1px solid var(--line); border-radius: 15px;
-  padding: 15px 11px; cursor: pointer; text-align: center;
-  display: flex; flex-direction: column; align-items: center; gap: 5px;
-  transition: transform .08s, border-color .15s;
+/* ---------- the strip (walkable world) ---------- */
+.world {
+  position: relative;
+  height: 440px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  touch-action: none; /* taps drive walking, don't scroll/zoom */
+  /* neon plaza at night: violet horizon up top, a lit floor sweeping toward the viewer */
+  background:
+    radial-gradient(120% 70% at 50% 116%, rgba(139, 123, 255, .28), transparent 60%),
+    radial-gradient(90% 55% at 50% -8%, rgba(255, 90, 60, .16), transparent 62%),
+    linear-gradient(180deg, #120f2e 0%, #14113a 46%, #0b0920 47%, #0b0920 100%);
 }
-.place:active { transform: scale(.97); }
-.place:hover { border-color: var(--violet); }
-.place.tier-easy { border-color: rgba(55, 224, 176, .45); }
-.place.tier-medium { border-color: rgba(255, 194, 75, .45); }
-.place.tier-hard { border-color: rgba(255, 90, 60, .5); box-shadow: 0 0 20px -8px rgba(255, 90, 60, .5); }
-.p-ico { font-size: 26px; }
-.p-lbl { font-family: 'Anton', Impact, sans-serif; font-size: 14px; letter-spacing: .5px; text-transform: uppercase; }
-.p-desc { font-size: 10.5px; color: var(--dim); line-height: 1.35; }
+/* perspective floor lines on the lower ("ground") band */
+.world::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 47%; bottom: 0;
+  background-image:
+    repeating-linear-gradient(90deg, transparent 0 46px, rgba(139, 123, 255, .10) 46px 47px),
+    repeating-linear-gradient(0deg, transparent 0 34px, rgba(139, 123, 255, .08) 34px 35px);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 40%);
+  mask-image: linear-gradient(180deg, transparent, #000 40%);
+  pointer-events: none;
+}
+
+.bldg {
+  position: absolute; transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  background: none; border: 0; padding: 0; cursor: pointer; z-index: 3;
+  width: 92px;
+}
+.b-face {
+  width: 88px; height: 60px; border-radius: 12px;
+  border: 1px solid var(--line);
+  display: flex; align-items: flex-end; justify-content: center;
+  background-color: var(--ink3); background-size: cover; background-position: center;
+  box-shadow: 0 8px 20px -8px rgba(0, 0, 0, .7);
+  transition: transform .1s, box-shadow .2s, filter .2s;
+}
+.b-emoji { font-size: 22px; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .6)); margin-bottom: 4px; }
+.b-tag {
+  font-family: 'Anton', Impact, sans-serif; font-size: 12px; letter-spacing: .5px;
+  text-transform: uppercase; color: var(--text);
+  background: rgba(12, 10, 31, .72); border: 1px solid var(--line);
+  padding: 2px 8px; border-radius: 20px; white-space: nowrap;
+}
+.bldg:hover .b-face, .bldg:focus-visible .b-face { transform: translateY(-3px); filter: brightness(1.12); }
+.bldg:active .b-face { transform: translateY(0) scale(.97); }
+.b-easy .b-face   { background-image: linear-gradient(rgba(12,10,31,.35), rgba(12,10,31,.62)), url('./assets/bg-gym-easy.webp');   border-color: rgba(55,224,176,.6); box-shadow: 0 0 18px -6px rgba(55,224,176,.5); }
+.b-medium .b-face { background-image: linear-gradient(rgba(12,10,31,.35), rgba(12,10,31,.62)), url('./assets/bg-gym-medium.webp'); border-color: rgba(255,194,75,.6); box-shadow: 0 0 18px -6px rgba(255,194,75,.5); }
+.b-hard .b-face   { background-image: linear-gradient(rgba(12,10,31,.35), rgba(12,10,31,.62)), url('./assets/bg-gym-hard.webp');   border-color: rgba(255,90,60,.65); box-shadow: 0 0 18px -6px rgba(255,90,60,.55); }
+.b-food .b-face   { background-image: linear-gradient(rgba(12,10,31,.30), rgba(12,10,31,.55)), url('./assets/bg-food.webp');       border-color: rgba(55,224,176,.5); }
+.b-rest .b-face   { background: linear-gradient(160deg, #221b4a, #14113a); border-color: var(--violet); }
+.b-arena .b-face  { background: linear-gradient(160deg, rgba(255,194,75,.22), #14113a); border-color: rgba(255,194,75,.6); }
+
+.walker {
+  position: absolute; transform: translate(-50%, -100%);
+  z-index: 5; will-change: left, top; pointer-events: none;
+}
+.walker svg { display: block; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .55)); }
+.walker.flip svg { transform: scaleX(-1); }
+.walker-shadow {
+  position: absolute; left: 50%; bottom: -4px; transform: translateX(-50%);
+  width: 34px; height: 9px; border-radius: 50%;
+  background: rgba(8, 6, 22, .55); filter: blur(2px);
+}
+.walker.walking svg { animation: strut .34s ease-in-out infinite; }
+@keyframes strut { 50% { transform: translateY(-3px) rotate(-1.5deg); } }
+.walker.walking.flip svg { animation: strutflip .34s ease-in-out infinite; }
+@keyframes strutflip { 0%, 100% { transform: scaleX(-1); } 50% { transform: scaleX(-1) translateY(-3px) rotate(1.5deg); } }
+
+.tap-hint {
+  position: absolute; left: 50%; top: 40%; transform: translateX(-50%);
+  font-size: 11px; color: var(--text); letter-spacing: .5px;
+  background: rgba(12, 10, 31, .7); border: 1px solid var(--line);
+  padding: 6px 12px; border-radius: 20px; z-index: 4; pointer-events: none;
+  animation: hintpulse 1.8s ease-in-out infinite;
+}
+.tap-hint.gone { opacity: 0; transition: opacity .3s; }
+@keyframes hintpulse { 50% { opacity: .55; } }
 
 /* ---------- mini-games ---------- */
 .mini {
