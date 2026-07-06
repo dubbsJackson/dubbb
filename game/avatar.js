@@ -29,11 +29,12 @@ export function avatarSVG(avatar, muscle, lean, { width = 150, height = 200 } = 
   const hair = byId(HAIRS, avatar.hair);
   const outfit = byId(OUTFITS, avatar.outfit);
   const cx = 110;
+  const bulk = byId(FRAMES, avatar.bodyFrame).bulk || 1;   // Bigger frame → heavier, rounder start
   const uid = `sk${Math.round(muscle * 100)}${Math.round(lean * 100)}${tone.id}${avatar.gender === 'woman' ? 'w' : 'm'}`;
 
   const body = avatar.gender === 'woman'
-    ? womanBody(cx, muscle, lean, outfit, uid)
-    : manBody(cx, muscle, lean, outfit, uid);
+    ? womanBody(cx, muscle, lean, outfit, uid, bulk)
+    : manBody(cx, muscle, lean, outfit, uid, bulk);
 
   return `
   <svg viewBox="0 0 220 250" width="${width}" height="${height}" role="img" aria-label="Your avatar">
@@ -53,10 +54,11 @@ export function avatarSVG(avatar, muscle, lean, { width = 150, height = 200 } = 
 }
 
 /* ---------- man: gets bigger + more ripped as muscle & lean rise ---------- */
-function manBody(cx, muscle, lean, outfit, uid) {
+function manBody(cx, muscle, lean, outfit, uid, bulk = 1) {
+  const fat = 1 - lean;
   const shoulder = 34 + muscle * 40;                 // wider delts the more you lift
-  const belly = 30 - lean * 15 + (1 - muscle) * 4;   // waist tightens with leanness
-  const arm = 6 + muscle * 12;
+  const belly = 15 + fat * 15 * bulk + (1 - muscle) * 3; // waist: round & heavy when soft/bulky, tight when lean
+  const arm = 6 + muscle * 12 + fat * 3 * (bulk - 1);
   const pecs = muscle > 0.45;
   const abs = lean > 0.5 && muscle > 0.4;
   const ripped = lean > 0.6 && muscle > 0.62;        // full six-pack + obliques + traps
@@ -106,13 +108,13 @@ function manBody(cx, muscle, lean, outfit, uid) {
 }
 
 /* ---------- woman: round at low leanness → slender + athletic as leanness rises ---------- */
-function womanBody(cx, muscle, lean, outfit, uid) {
+function womanBody(cx, muscle, lean, outfit, uid, bulk = 1) {
   const round = 1 - lean;                          // softness when leanness is low
-  const shoulder = 27 + muscle * 17;
-  const waist = 15 + round * 16 - muscle * 1.5;    // clearly round when soft, cinched when lean
-  const hip = 22 + round * 10;
-  const bust = 6 + muscle * 2 + round * 3;
-  const arm = 5 + muscle * 7;
+  const shoulder = 27 + muscle * 17 + round * 4 * (bulk - 1);
+  const waist = 14 + round * 16 * bulk - muscle * 1.5; // big & round when soft/bulky, cinched when lean
+  const hip = 21 + round * 11 * bulk;
+  const bust = 6 + muscle * 2 + round * 3 * bulk;
+  const arm = 5 + muscle * 7 + round * 2 * (bulk - 1);
   const abs = lean > 0.62;                         // subtle athletic definition when lean
   const WY = 130;
 

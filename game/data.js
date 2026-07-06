@@ -81,9 +81,11 @@ export const HAIRS = [
 // Starting size. Frame sets the START weight (and the goal weight it's cutting toward).
 // muscle/lean are the man's starting composition; women start a touch rounder (see
 // startRun's gender modifier). Both start around physique 30 so the 26-day pace holds.
+// `bulk` scales how big & round the STARTING body reads (heavier frame = rounder),
+// applied to the soft/fat part of the silhouette so it fades as the player leans out.
 export const FRAMES = [
-  { id: 'big',    lbl: 'Big',    desc: 'Start at 200 lb. A solid base to sculpt.', startWeight: 200, goalWeight: 175, muscle: 0.30, lean: 0.30 },
-  { id: 'bigger', lbl: 'Bigger', desc: 'Start at 260 lb. The big transformation.',  startWeight: 260, goalWeight: 205, muscle: 0.33, lean: 0.27 },
+  { id: 'big',    lbl: 'Big',    desc: 'Start at 200 lb. A solid base to sculpt.', startWeight: 200, goalWeight: 175, muscle: 0.30, lean: 0.30, bulk: 1.0 },
+  { id: 'bigger', lbl: 'Bigger', desc: 'Start at 260 lb. The big transformation.',  startWeight: 260, goalWeight: 205, muscle: 0.33, lean: 0.27, bulk: 1.45 },
 ];
 
 export const GENDERS = [
