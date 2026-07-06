@@ -44,14 +44,23 @@ export function avatarSVG(avatar, muscle, lean, { width = 150, height = 200 } = 
     </defs>
     <!-- glow floor -->
     <ellipse cx="${cx}" cy="236" rx="${40 + muscle * 22}" ry="8" fill="rgba(139,123,255,.25)"/>
-    <!-- legs (shorts) -->
-    <path d="M${cx - 17},150 L${cx - 21},192 L${cx - 7},192 L${cx - 4},156 Z" fill="${outfit.short}"/>
-    <path d="M${cx + 17},150 L${cx + 21},192 L${cx + 7},192 L${cx + 4},156 Z" fill="${outfit.short}"/>
-    <path d="M${cx - 21},192 L${cx - 22},228 L${cx - 9},228 L${cx - 7},192 Z" fill="url(#${uid})"/>
-    <path d="M${cx + 21},192 L${cx + 22},228 L${cx + 9},228 L${cx + 7},192 Z" fill="url(#${uid})"/>
-    <rect x="${cx - 25}" y="226" width="18" height="8" rx="4" fill="${outfit.top}"/>
-    <rect x="${cx + 7}" y="226" width="18" height="8" rx="4" fill="${outfit.top}"/>
-    <!-- torso -->
+    <!-- legs (skin) -->
+    <path d="M${cx - 20},150 L${cx - 22},228 L${cx - 9},228 L${cx - 6},150 Z" fill="url(#${uid})"/>
+    <path d="M${cx + 20},150 L${cx + 22},228 L${cx + 9},228 L${cx + 6},150 Z" fill="url(#${uid})"/>
+    <!-- shorts (cover hips + upper thighs) -->
+    <path d="M${cx - belly - 1},144 L${cx - 22},188 L${cx - 6},188 L${cx - 3},150
+             L${cx + 3},150 L${cx + 6},188 L${cx + 22},188 L${cx + belly + 1},144
+             C${cx + belly + 1},152 ${cx - belly - 1},152 ${cx - belly - 1},144 Z" fill="${outfit.short}"/>
+    <line x1="${cx}" y1="150" x2="${cx}" y2="186" stroke="#0c0a1f" stroke-width="1.5" opacity=".3"/>
+    <!-- shoes -->
+    <rect x="${cx - 25}" y="224" width="19" height="9" rx="4" fill="${outfit.top}"/>
+    <rect x="${cx + 6}" y="224" width="19" height="9" rx="4" fill="${outfit.top}"/>
+    <!-- arms (skin) -->
+    <rect x="${cx - shoulder - arm}" y="80" width="${arm}" height="62" rx="${arm / 2}" fill="url(#${uid})"/>
+    <rect x="${cx + shoulder}" y="80" width="${arm}" height="62" rx="${arm / 2}" fill="url(#${uid})"/>
+    ${muscle > 0.65 ? `<circle cx="${cx - shoulder - arm / 2}" cy="112" r="${arm * .7}" fill="url(#${uid})"/>
+      <circle cx="${cx + shoulder + arm / 2}" cy="112" r="${arm * .7}" fill="url(#${uid})"/>` : ''}
+    <!-- torso (skin base for neck + edges) -->
     <path d="M${cx - shoulder},78
              C${cx - shoulder},78 ${cx - belly},120 ${cx - belly},135
              C${cx - belly},152 ${cx - 18},158 ${cx},158
@@ -59,28 +68,28 @@ export function avatarSVG(avatar, muscle, lean, { width = 150, height = 200 } = 
              C${cx + belly},120 ${cx + shoulder},78 ${cx + shoulder},78
              C${cx + shoulder},78 ${cx + 20},64 ${cx},64
              C${cx - 20},64 ${cx - shoulder},78 ${cx - shoulder},78 Z" fill="url(#${uid})"/>
-    <!-- tank top -->
-    <path d="M${cx - shoulder * .72},84
-             C${cx - shoulder * .72},84 ${cx - belly},122 ${cx - belly},136
-             C${cx - belly},150 ${cx - 16},156 ${cx},156
-             C${cx + 16},156 ${cx + belly},150 ${cx + belly},136
-             C${cx + belly},122 ${cx + shoulder * .72},84 ${cx + shoulder * .72},84
-             C${cx + 14},72 ${cx - 14},72 ${cx - shoulder * .72},84 Z"
-          fill="${outfit.top}" opacity="0.9"/>
-    ${abs ? `<g opacity="0.35" stroke="#0c0a1f" stroke-width="2" fill="none">
-      <line x1="${cx}" y1="100" x2="${cx}" y2="150"/>
+    <!-- fitted shirt: covers the whole torso; muscle reads through as seams -->
+    <path d="M${cx - shoulder + 2},80
+             C${cx - shoulder + 2},80 ${cx - belly},120 ${cx - belly},136
+             C${cx - belly},150 ${cx - 17},156 ${cx},156
+             C${cx + 17},156 ${cx + belly},150 ${cx + belly},136
+             C${cx + belly},120 ${cx + shoulder - 2},80 ${cx + shoulder - 2},80
+             C${cx + shoulder - 2},80 ${cx + 17},70 ${cx},70
+             C${cx - 17},70 ${cx - shoulder + 2},80 ${cx - shoulder + 2},80 Z" fill="${outfit.top}"/>
+    <!-- collar -->
+    <path d="M${cx - 10},71 Q${cx},80 ${cx + 10},71" fill="none" stroke="#0c0a1f" stroke-width="2" opacity=".28"/>
+    <!-- sleeves over the upper arms -->
+    <rect x="${cx - shoulder - arm - 1}" y="79" width="${arm + 3}" height="26" rx="${arm / 2}" fill="${outfit.top}"/>
+    <rect x="${cx + shoulder - 2}" y="79" width="${arm + 3}" height="26" rx="${arm / 2}" fill="${outfit.top}"/>
+    ${abs ? `<g opacity="0.3" stroke="#0c0a1f" stroke-width="2" fill="none">
+      <line x1="${cx}" y1="98" x2="${cx}" y2="150"/>
       <line x1="${cx - 12}" y1="112" x2="${cx + 12}" y2="112"/>
       <line x1="${cx - 11}" y1="128" x2="${cx + 11}" y2="128"/>
     </g>` : ''}
-    ${pecs ? `<g opacity="0.35" stroke="#0c0a1f" stroke-width="2.5" fill="none">
-      <path d="M${cx - shoulder * .6},86 q10,-12 20,-2"/>
-      <path d="M${cx + shoulder * .6},86 q-10,-12 -20,-2"/>
+    ${pecs ? `<g opacity="0.3" stroke="#0c0a1f" stroke-width="2.5" fill="none">
+      <path d="M${cx - shoulder * .6},88 q10,-12 20,-2"/>
+      <path d="M${cx + shoulder * .6},88 q-10,-12 -20,-2"/>
     </g>` : ''}
-    <!-- arms -->
-    <rect x="${cx - shoulder - arm}" y="80" width="${arm}" height="62" rx="${arm / 2}" fill="url(#${uid})"/>
-    <rect x="${cx + shoulder}" y="80" width="${arm}" height="62" rx="${arm / 2}" fill="url(#${uid})"/>
-    ${muscle > 0.65 ? `<circle cx="${cx - shoulder - arm / 2}" cy="98" r="${arm * .72}" fill="url(#${uid})"/>
-      <circle cx="${cx + shoulder + arm / 2}" cy="98" r="${arm * .72}" fill="url(#${uid})"/>` : ''}
     <!-- head -->
     <circle cx="${cx}" cy="46" r="20" fill="url(#${uid})"/>
     ${hairSVG(hair, cx)}
