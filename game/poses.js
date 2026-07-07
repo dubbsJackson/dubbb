@@ -82,13 +82,31 @@ const effort = (cx, cy) => `<g stroke="#ffc24b" stroke-width="2.5" stroke-lineca
 const bust = (cx, cy, sw, L) => L.fem
   ? `<path d="M${cx - sw * 0.62},${cy} q${sw * 0.32},${sw * 0.42} ${sw * 0.62},0" fill="none" stroke="${DARK}" stroke-width="1.5" opacity=".18"/>` : '';
 
+/* delts bulge on the shoulders as muscle climbs (so you SEE yourself get bigger) */
+const delt = (x, y, muscle, color) => muscle > 0.48
+  ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(3 + (muscle - 0.48) * 14).toFixed(1)}" fill="${color}"/>` : '';
+
+/* pec / ab definition seams over a front-view torso, deepening with muscle */
+function def(cx, topY, botY, sw, muscle, fem) {
+  if (muscle < 0.46) return '';
+  const op = (0.14 + muscle * 0.24).toFixed(2);
+  const pY = topY + 6;
+  return `<g stroke="${DARK}" stroke-width="1.6" fill="none" opacity="${op}">
+    <line x1="${cx}" y1="${pY}" x2="${cx}" y2="${botY - 3}"/>
+    ${!fem ? `<path d="M${cx - sw * 0.5},${pY + 2} q${sw * 0.42},-7 ${sw * 0.82},1"/><path d="M${cx + sw * 0.5},${pY + 2} q-${sw * 0.42},-7 -${sw * 0.82},1"/>` : ''}
+    <line x1="${cx - sw * 0.46}" y1="${pY + 13}" x2="${cx + sw * 0.46}" y2="${pY + 13}"/>
+    <line x1="${cx - sw * 0.42}" y1="${pY + 23}" x2="${cx + sw * 0.42}" y2="${pY + 23}"/>
+    ${muscle > 0.7 ? `<line x1="${cx - sw * 0.38}" y1="${pY + 32}" x2="${cx + sw * 0.38}" y2="${pY + 32}"/>` : ''}
+  </g>`;
+}
+
 /* ================= WEIGHTS — overhead press (front view) ================= */
 export function pressScene(avatar, muscle, t) {
   const L = look(avatar);
   const cx = 120;
-  const sw = (L.fem ? 13 : 17) + muscle * (L.fem ? 9 : 13);   // shoulders: broad man / narrow woman
+  const sw = (L.fem ? 13 : 17) + muscle * (L.fem ? 11 : 16);   // shoulders widen with muscle
   const hw = L.fem ? sw + 5 : sw - 1;                          // hips: wider on woman
-  const limbW = (L.fem ? 6.5 : 8) + muscle * 6;
+  const limbW = (L.fem ? 6.5 : 8) + muscle * 10;              // arms thicken as you get stronger
   const dip = (1 - t) * 5;
   const shY = 112 + dip;
   const barY = 104 + dip - t * 62;
@@ -103,8 +121,10 @@ export function pressScene(avatar, muscle, t) {
     <path d="M${cx - sw - 2},${shY - 4} L${cx - hw},${164 + dip} L${cx + hw},${164 + dip} L${cx + sw + 2},${shY - 4}
              Q${cx},${shY - 16} ${cx - sw - 2},${shY - 4} Z" fill="${L.top}"/>
     ${bust(cx, shY + 4, sw, L)}
+    ${def(cx, shY - 2, 162 + dip, sw, muscle, L.fem)}
     <rect x="${cx - hw}" y="${160 + dip}" width="${hw * 2}" height="15" rx="6" fill="${L.short}"/>
     ${limb(cx - sw, shY, el.l.kx, el.l.ky, limbW + 2, L.top)}${limb(cx + sw, shY, el.r.kx, el.r.ky, limbW + 2, L.top)}
+    ${delt(cx - sw, shY, muscle, L.top)}${delt(cx + sw, shY, muscle, L.top)}
     ${limb(el.l.kx, el.l.ky, el.l.tx, el.l.ty, limbW, L.skin)}${limb(el.r.kx, el.r.ky, el.r.tx, el.r.ty, limbW, L.skin)}
     ${headFront(cx, shY - 26, 15, L, t > 0.85)}
     <line x1="${cx - 72}" y1="${barY}" x2="${cx + 72}" y2="${barY}" stroke="#b9b4e6" stroke-width="5" stroke-linecap="round"/>
@@ -120,9 +140,9 @@ export function pressScene(avatar, muscle, t) {
 export function pullupScene(avatar, muscle, t) {
   const L = look(avatar);
   const cx = 120;
-  const sw = (L.fem ? 12 : 16) + muscle * (L.fem ? 8 : 11);
+  const sw = (L.fem ? 12 : 16) + muscle * (L.fem ? 10 : 14);
   const hw = L.fem ? sw + 4 : sw;
-  const limbW = (L.fem ? 6.5 : 8) + muscle * 5;
+  const limbW = (L.fem ? 6.5 : 8) + muscle * 9;
   const barY = 34, handX = 34;
   const shY = 124 - t * 58;
   const el = { l: joint(cx - sw, shY, cx - handX, barY, 30, 30, 1), r: joint(cx + sw, shY, cx + handX, barY, 30, 30, -1) };
@@ -137,7 +157,9 @@ export function pullupScene(avatar, muscle, t) {
     <circle cx="${cx + handX}" cy="${barY}" r="${limbW * .55}" fill="${L.skin}"/>
     <path d="M${cx - sw - 1},${shY - 3} L${cx - hw},${hipY} L${cx + hw},${hipY} L${cx + sw + 1},${shY - 3}
              Q${cx},${shY - 14} ${cx - sw - 1},${shY - 3} Z" fill="${L.top}"/>
+    ${delt(cx - sw, shY, muscle, L.top)}${delt(cx + sw, shY, muscle, L.top)}
     ${bust(cx, shY + 6, sw, L)}
+    ${def(cx, shY - 1, hipY, sw, muscle, L.fem)}
     <rect x="${cx - hw}" y="${hipY - 4}" width="${hw * 2}" height="14" rx="6" fill="${L.short}"/>
     ${limb(cx - hw * 0.6, hipY + 9, cx - hw * 0.7, hipY + 32, limbW + 1, L.skin)}${limb(cx + hw * 0.6, hipY + 9, cx + hw * 0.7, hipY + 32, limbW + 1, L.skin)}
     ${limb(cx - hw * 0.7, hipY + 32, cx - hw * 0.9, hipY + 48, limbW, L.skin)}${limb(cx + hw * 0.7, hipY + 32, cx + hw * 0.5, hipY + 48, limbW, L.skin)}
@@ -153,7 +175,7 @@ export function runScene(avatar, muscle, phase, beltOffset, speedGlow = 0) {
   const bob = 2.5 * Math.sin(phase * Math.PI * 4);
   const hipX = 108, hipY = 138 + bob, groundY = 176;
   const shX = hipX + 10, shY = 96 + bob;
-  const limbW = (L.fem ? 6.5 : 8) + muscle * 5;
+  const limbW = (L.fem ? 6.5 : 8) + muscle * 8;
   const legs = [phase, phase + 0.5].map((ph, i) => {
     const fx = hipX + 30 * Math.cos(ph * Math.PI * 2);
     const fy = groundY - Math.max(0, 16 * Math.sin(ph * Math.PI * 2)) - 4;
@@ -178,8 +200,9 @@ export function runScene(avatar, muscle, phase, beltOffset, speedGlow = 0) {
     <line x1="50" y1="${groundY + 4}" x2="192" y2="${groundY + 4}" stroke="#8b7bff" stroke-width="2.5"
       stroke-dasharray="10 8" stroke-dashoffset="${(-beltOffset).toFixed(0)}"/>
     ${legs}
-    ${limb(hipX, hipY, shX, shY, (L.fem ? 14 : 17) + muscle * 8, L.top)}
+    ${limb(hipX, hipY, shX, shY, (L.fem ? 14 : 17) + muscle * 12, L.top)}
     ${chest}
+    ${delt(shX, shY + 3, muscle, L.top)}
     ${arms}
     ${headSide(shX + 9, shY - 15, 13, L, -1)}
   `);
@@ -188,7 +211,7 @@ export function runScene(avatar, muscle, phase, beltOffset, speedGlow = 0) {
 /* ================= BIKE — side view pedal ================= */
 export function bikeScene(avatar, muscle, crankAngle, wheelAngle, inBand = false) {
   const L = look(avatar);
-  const limbW = (L.fem ? 6.5 : 8) + muscle * 5;
+  const limbW = (L.fem ? 6.5 : 8) + muscle * 8;
   const crank = { x: 122, y: 160, r: 15 };
   const seat = { x: 100, y: 122 }, bars = { x: 158, y: 116 };
   const hip = { x: seat.x + 3, y: seat.y - 4 };
@@ -220,8 +243,9 @@ export function bikeScene(avatar, muscle, crankAngle, wheelAngle, inBand = false
     <rect x="90" y="114" width="20" height="6" rx="3" fill="${IRON}"/>
     <path d="M158,120 L158,110 L166,106" fill="none" stroke="${IRON}" stroke-width="4.5" stroke-linecap="round"/>
     ${pedals}
-    ${limb(hip.x, hip.y, sh.x, sh.y, (L.fem ? 14 : 16) + muscle * 8, L.top)}
+    ${limb(hip.x, hip.y, sh.x, sh.y, (L.fem ? 14 : 16) + muscle * 12, L.top)}
     ${chest}
+    ${delt(sh.x, sh.y + 3, muscle, L.top)}
     ${limb(sh.x, sh.y + 4, elbow.kx, elbow.ky, limbW + 1, L.top)}${limb(elbow.kx, elbow.ky, 164, 108, limbW - 1, L.skin)}
     ${headSide(sh.x + 10, sh.y - 14, 13, L, 1)}
   `);
