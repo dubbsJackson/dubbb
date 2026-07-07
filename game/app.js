@@ -10,31 +10,14 @@ import { loadBoard, submitScore, ranked } from './leaderboard.js';
 import { catalog, premiumTeaser, crossSellUrl } from './economy.js';
 import { saveGame, loadGame, clearGame, loadSettings, saveSettings, store } from './save.js';
 import { platform } from './platform.js';
+import { sound, setMuted } from './sound.js';
 
 const app = document.getElementById('app');
 let S = null;                    // live run state
 let settings = { muted: false };
 
-/* ---------- tiny sound (WebAudio blips, honors mute + reduced motion) ---------- */
-let audioCtx = null;
-function blip(freq = 520, dur = 0.07, type = 'triangle', vol = 0.12) {
-  if (settings.muted) return;
-  try {
-    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-    o.type = type; o.frequency.value = freq;
-    g.gain.setValueAtTime(vol, audioCtx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
-    o.connect(g); g.connect(audioCtx.destination);
-    o.start(); o.stop(audioCtx.currentTime + dur);
-  } catch { /* no audio available — fine */ }
-}
-const sfx = {
-  tap: () => blip(520, 0.05),
-  good: () => { blip(660, 0.08); setTimeout(() => blip(880, 0.1), 90); },
-  bad: () => blip(180, 0.15, 'sawtooth', 0.08),
-  win: () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => blip(f, 0.14), i * 120)),
-};
+/* ---------- sound (synthesized, shared with the mini-games via sound.js) ---------- */
+const sfx = sound;
 
 /* ---------- toast ---------- */
 const toastEl = document.createElement('div');
@@ -63,6 +46,7 @@ async function saveCareer(c) { await store.setJSON('career', c); }
 async function boot() {
   await platform.init();
   settings = await loadSettings();
+  setMuted(settings.muted);
   await screenSplash();
   platform.loadingFinished();
 }
@@ -113,6 +97,8 @@ async function screenSplash() {
   on(app, '#howBtn', () => screenIntro(() => screenSplash(), 'Back'));
   on(app, '#mute', async (e) => {
     settings.muted = !settings.muted;
+    setMuted(settings.muted);
+    if (!settings.muted) sound.tap();
     await saveSettings(settings);
     e.currentTarget.textContent = settings.muted ? '🔇' : '🔊';
   });
@@ -599,7 +585,7 @@ function screenFood() {
     }
     applyFood(S, food);
     autosave();
-    if (food.good) { sfx.good(); toast(`${food.icon} ${food.lbl} · momentum +${food.momentum}%`); }
+    if (food.good) { sfx.chomp(); toast(`${food.icon} ${food.lbl} · momentum +${food.momentum}%`); }
     else { sfx.bad(); toast(`${food.icon} Tasty… momentum ${food.momentum}%`); }
     screenFood();
   }));
@@ -813,6 +799,8 @@ function screenSettings() {
     <div class="note">DreamBodX Fitness · progress saves on this device</div>`;
   on(app, '#mute', async (e) => {
     settings.muted = !settings.muted;
+    setMuted(settings.muted);
+    if (!settings.muted) sound.tap();
     await saveSettings(settings);
     e.currentTarget.textContent = settings.muted ? '🔇 Sound: OFF' : '🔊 Sound: ON';
   });

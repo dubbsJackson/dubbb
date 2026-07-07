@@ -8,6 +8,7 @@
    pedals spin with cadence. Touch-first (pointerdown); Space/Enter works too. */
 
 import { pressScene, pullupScene, runScene, bikeScene } from './poses.js';
+import { sound } from './sound.js';
 
 const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -57,7 +58,7 @@ export function weightsGame(container, tier, avatar, stats) {
     const start = performance.now();
     let last = start;
 
-    const lift = () => { power = Math.min(100, power + perTap); pulse(tap); };
+    const lift = () => { power = Math.min(100, power + perTap); pulse(tap); sound.clank(); };
     tap.addEventListener('pointerdown', e => { e.preventDefault(); lift(); });
     tap.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') lift(); });
 
@@ -77,8 +78,8 @@ export function weightsGame(container, tier, avatar, stats) {
     function finish(now) {
       done = true;
       let q;
-      if (topAt != null) q = 0.75 + 0.25 * Math.max(0, 1 - (topAt - start) / duration); // locked out: base + speed bonus
-      else q = (power / 100) * 0.7;                                                     // partial lift still pays
+      if (topAt != null) { q = 0.75 + 0.25 * Math.max(0, 1 - (topAt - start) / duration); sound.thud(); } // locked out
+      else q = (power / 100) * 0.7;                                                                        // partial lift still pays
       endFlash(el, q, () => { el.remove(); resolve(floored(q, tier)); });
     }
   });
@@ -122,8 +123,8 @@ export function pullupGame(container, tier, avatar, stats) {
     function hit(pos) {
       if (done) return;
       if (pos !== expected) { pulse(pos === 'up' ? upBtn : downBtn); return; } // wrong target: no penalty
-      if (pos === 'up') { targetT = 1; expected = 'down'; }
-      else { targetT = 0; expected = 'up'; reps += 1; repn.textContent = reps; }
+      if (pos === 'up') { targetT = 1; expected = 'down'; sound.whoosh(); }
+      else { targetT = 0; expected = 'up'; reps += 1; repn.textContent = reps; sound.thud(); }
       pulse(pos === 'up' ? upBtn : downBtn);
       setActive();
     }
@@ -205,6 +206,7 @@ export function treadmillGame(container, tier, avatar, stats) {
       else q = Math.max(0.1, 0.4 - dist / 130);                                     // miss: partial credit
       qualities.push(q);
       if (q > 0.6) boost = 1;                                                       // visible surge on a clean stride
+      sound.step();
       dots[rep].classList.add(q > 0.6 ? 'hit' : 'miss');
       rep += 1;
       pulse(tap);
@@ -250,7 +252,7 @@ export function bikeGame(container, tier, avatar, stats) {
     const start = performance.now();
     let last = start;
 
-    const pedal = () => { cadence = Math.min(100, cadence + perTap); pulse(tap); };
+    const pedal = () => { cadence = Math.min(100, cadence + perTap); pulse(tap); sound.tick(); };
     tap.addEventListener('pointerdown', e => { e.preventDefault(); pedal(); });
     tap.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') pedal(); });
 

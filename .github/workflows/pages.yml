@@ -42,3 +42,7 @@ jobs:
           git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Purge jsDelivr CDN cache (so the public link updates fast)
+        run: |
+          sleep 5
+          curl -s "https://purge.jsdelivr.net/gh/${GITHUB_REPOSITORY}@gh-pages/index.html" || true
