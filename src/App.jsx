@@ -38,6 +38,21 @@ function Stars() {
   )
 }
 
+// Proportional star rating (supports fractional values like 4.7).
+function StarRating({ rating, count }) {
+  const pct = `${(rating / 5) * 100}%`
+  return (
+    <div className="rating" aria-label={`Rated ${rating} out of 5 from ${count} reviews`}>
+      <span className="stars-wrap" aria-hidden="true">
+        <span className="stars-bg">★★★★★</span>
+        <span className="stars-fg" style={{ width: pct }}>★★★★★</span>
+      </span>
+      <span className="rating-num">{rating.toFixed(1)}</span>
+      <span className="rating-count">({count})</span>
+    </div>
+  )
+}
+
 function SplitChars({ text, className }) {
   return (
     <span className={className} aria-label={text} role="text">
@@ -226,6 +241,7 @@ function EbookShowcase() {
                 <span className="ebook-tag">{book.tag}</span>
               </a>
               <div className="ebook-body">
+                <StarRating rating={book.rating} count={book.reviewCount} />
                 <h3>{book.title}</h3>
                 <p className="ebook-blurb">{book.blurb}</p>
                 <ul className="ebook-bullets">
@@ -233,6 +249,11 @@ function EbookShowcase() {
                     <li key={b}>{b}</li>
                   ))}
                 </ul>
+                <blockquote className="ebook-review">
+                  <Stars />
+                  <span className="ebook-review-text">“{book.review}”</span>
+                  <cite className="ebook-review-name">— {book.reviewer}</cite>
+                </blockquote>
                 <div className="ebook-foot">
                   <span className="ebook-price">{fmt(book.price)}</span>
                   <a className="buy-btn ebook-buy" href={href} target="_blank" rel="noreferrer">
@@ -489,7 +510,7 @@ export default function App() {
           <a href={SHOPIFY_DOMAIN} target="_blank" rel="noreferrer">dreambodxfitness.com</a>
         </p>
         <p className="footer-fine">
-          Review highlights paraphrased from verified buyer feedback.
+          Ratings &amp; review highlights are illustrative — replace with your verified buyer feedback before publishing.
         </p>
         <p className="footer-fine">© {new Date().getFullYear()} DreamBodX Fitness. All rights reserved.</p>
       </footer>
