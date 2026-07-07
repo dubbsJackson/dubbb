@@ -35,6 +35,7 @@ challenges.js       # per-machine mini-games (treadmill, weights, bike, circuit)
 leaderboard.js      # ranking (score / streak / wins); local+seeded now, server later
 save.js             # save/load; local first, cloud sync later (swappable interface)
 economy.js          # XP, rewards, cosmetics, premium passes (hooks only in MVP)
+poses.js            # "action cam": animated SVG scenes of the avatar exercising
 platform.js         # Poki/CrazyGames SDK adapter (lifecycle + ad hooks; no-op locally)
 ```
 

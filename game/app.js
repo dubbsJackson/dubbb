@@ -461,49 +461,100 @@ function doRest() {
 }
 
 /* =================================================================
-   7 · GYM + MINI-GAMES
+   7 · GYM — a walkable room: walk your avatar UP TO a machine to use it
 ================================================================= */
-function screenGym(tierId) {
+const STATION_POS = {
+  weights:   { x: 22, y: 30 },
+  treadmill: { x: 78, y: 30 },
+  pullups:   { x: 22, y: 62 },
+  bike:      { x: 78, y: 62 },
+};
+
+function screenGym(tierId, walkerPos = { x: 50, y: 88 }) {
   const tier = CONFIG.tiers[tierId];
   const place = PLACES.find(p => p.type === 'gym' && p.tier === tierId);
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   app.innerHTML = `
-    ${brand}
-    <div class="tag tier-tag tier-${tierId}">${place.icon} ${place.lbl.toUpperCase()} · ${tierId.toUpperCase()} TIER · ${tier.payout}× PAYOUT</div>
+    <div class="tag tier-tag tier-${tierId}" style="margin-top:2px">${place.icon} ${place.lbl.toUpperCase()} · ${tierId.toUpperCase()} TIER</div>
     <div class="energy-row">
       <div class="e-lbl">ENERGY</div>
       <div class="energy">${Array.from({ length: CONFIG.energyPerDay }, (_, i) => `<div class="pip${i < S.energy ? ' on' : ''}"></div>`).join('')}</div>
     </div>
-    <div class="stage gym-stage bg-${tierId}"><div class="avatar-wrap" id="gymAv">${avatarSVG(S.avatar, S.stats.muscle, S.stats.lean, { width: 110, height: 150 })}</div></div>
-    <div class="actions" id="machines">
-      ${MACHINES.map(m => `
-        <button class="act m-act${S.energy < 1 ? ' locked' : ''}" data-id="${m.id}">
-          <div class="cost">⚡1</div>
-          <span class="m-ico ico-${m.id}" aria-hidden="true"></span>
-          <div class="m-txt">
-            <div class="an">${m.lbl}</div>
-            <div class="ad">${m.desc}</div>
-          </div>
-        </button>`).join('')}
+    <div class="world gymroom bg-${tierId}" id="gymroom">
+      ${MACHINES.map(m => {
+        const pos = STATION_POS[m.id];
+        return `<button class="bldg station${S.energy < 1 ? ' drained' : ''}" data-id="${m.id}" style="left:${pos.x}%;top:${pos.y}%" aria-label="${m.lbl} — ${m.desc}">
+          <span class="b-face station-face"><span class="m-ico ico-${m.id}" aria-hidden="true"></span></span>
+          <span class="b-tag">${m.lbl} <em class="b-cost">⚡1</em></span>
+        </button>`;
+      }).join('')}
+      <div class="walker" id="walker" style="left:${walkerPos.x}%;top:${walkerPos.y}%">
+        <div class="walker-shadow"></div>
+        ${avatarSVG(S.avatar, S.stats.muscle, S.stats.lean, { width: 52, height: 70 })}
+      </div>
+      <div class="tap-hint" id="tapHint">walk up to a machine to train</div>
     </div>
     <div class="foot">
-      <button class="btn ghost" id="back">← Back</button>
+      <button class="btn ghost" id="back">← Leave Gym</button>
     </div>`;
 
-  app.querySelectorAll('#machines .act').forEach(b => b.addEventListener('click', async () => {
+  const world = app.querySelector('#gymroom');
+  const walker = app.querySelector('#walker');
+  const hint = app.querySelector('#tapHint');
+  let busy = false;
+
+  function moveTo(x, y, then) {
+    const curX = parseFloat(walker.style.left);
+    const curY = parseFloat(walker.style.top);
+    walker.classList.toggle('flip', x < curX - 0.5);
+    const dist = Math.hypot(x - curX, y - curY);
+    const dur = reduce ? 0 : Math.min(1400, 180 + dist * 20);
+    walker.style.transition = dur ? `left ${dur}ms linear, top ${dur}ms linear` : 'none';
+    walker.classList.add('walking');
+    busy = true;
+    walker.style.left = x + '%';
+    walker.style.top = y + '%';
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      walker.classList.remove('walking');
+      busy = false;
+      walker.removeEventListener('transitionend', done);
+      if (then) then();
+    };
+    walker.addEventListener('transitionend', done);
+    setTimeout(done, dur + 80);
+  }
+
+  world.addEventListener('pointerdown', e => {
+    if (e.target.closest('.bldg') || busy) return;
+    const r = world.getBoundingClientRect();
+    const x = Math.max(8, Math.min(92, ((e.clientX - r.left) / r.width) * 100));
+    const y = Math.max(24, Math.min(90, ((e.clientY - r.top) / r.height) * 100));
+    if (hint) hint.classList.add('gone');
+    moveTo(x, y);
+  });
+
+  app.querySelectorAll('.station').forEach(b => b.addEventListener('click', () => {
+    if (busy) return;
     if (S.energy < 1) { sfx.bad(); return toast('⚡ Out of energy — end the day to recharge.'); }
     const machine = MACHINES.find(m => m.id === b.dataset.id);
-    S.energy -= 1;
+    const pos = STATION_POS[machine.id];
+    if (hint) hint.classList.add('gone');
     sfx.tap();
-    // mini-games overlay the whole card (not just the small avatar stage) so
-    // taller games like pull-ups have room and never overlap the machine tiles
-    const quality = await GAMES[machine.game](app, tier);
-    const gains = workoutGains(S, machine, quality, tier);
-    applyWorkout(S, gains);
-    autosave();
-    if (gains.comeback) { sfx.win(); toast(`💫 COMEBACK ×${CONFIG.comeback.gainMult}! +${gains.strength} STR · +${gains.stamina} STA · +${gains.score} pts`); }
-    else if (quality >= 0.85) { sfx.good(); toast(`⭐ PERFECT! +${gains.strength} STR · +${gains.stamina} STA · +${gains.score} pts`); }
-    else { sfx.good(); toast(`+${gains.strength} STR · +${gains.stamina} STA · +${gains.score} pts`); }
-    screenGym(tierId); // re-render: avatar + pips update
+    // walk to the machine, then the action cam takes over
+    moveTo(pos.x, Math.min(90, pos.y + 16), async () => {
+      S.energy -= 1;
+      const quality = await GAMES[machine.game](app, tier, S.avatar, S.stats);
+      const gains = workoutGains(S, machine, quality, tier);
+      applyWorkout(S, gains);
+      autosave();
+      if (gains.comeback) { sfx.win(); toast(`💫 COMEBACK ×${CONFIG.comeback.gainMult}! +${gains.strength} STR · +${gains.stamina} STA · +${gains.score} pts`); }
+      else if (quality >= 0.85) { sfx.good(); toast(`⭐ PERFECT! +${gains.strength} STR · +${gains.stamina} STA · +${gains.score} pts`); }
+      else { sfx.good(); toast(`+${gains.strength} STR · +${gains.stamina} STA · +${gains.score} pts`); }
+      screenGym(tierId, { x: pos.x, y: Math.min(90, pos.y + 16) }); // stay at the machine, stats/pips refresh
+    });
   }));
   on(app, '#back', screenHub);
 }
