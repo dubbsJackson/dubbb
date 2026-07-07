@@ -1,6 +1,11 @@
-# Publishes the game to GitHub Pages so anyone can play it at a public link
-# (no login). The site root IS the game — send people the Pages URL and it
-# loads straight into DreamBodX Fitness.
+# Publishes the game to a `gh-pages` branch so it can be served on GitHub Pages
+# at a public link (no login). The branch root IS the game — one self-contained
+# HTML file — so the Pages URL loads straight into DreamBodX Fitness.
+#
+# ONE-TIME SETUP (repo admin, ~10 seconds): after this workflow first runs and
+# creates the gh-pages branch, go to Settings → Pages → Build and deployment →
+# Source: "Deploy from a branch" → Branch: gh-pages / (root) → Save.
+# After that every push here republishes automatically.
 name: deploy-game-to-pages
 on:
   push:
@@ -8,16 +13,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
-  group: pages
+  group: pages-deploy
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,19 +30,15 @@ jobs:
       - run: npm ci
       - name: Build single-file game
         run: npx vite build --config vite.pages.config.js
-      - name: Configure Pages (enables it if needed)
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist-pages
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Publish to gh-pages branch
+        run: |
+          cd dist-pages
+          touch .nojekyll
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Deploy DreamBodX game to GitHub Pages"
+          git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
