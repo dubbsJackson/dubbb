@@ -3,6 +3,7 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Lenis from 'lenis'
 import { categories, collections, SHOPIFY_DOMAIN } from './data/products.js'
+import { ebooks } from './data/ebooks.js'
 import { initScene, setSceneProgress, setSceneAccent, setScenePointer } from './scene.js'
 
 gsap.registerPlugin(ScrollTrigger)
@@ -118,16 +119,14 @@ function Hero() {
           </span>
         </h1>
         <div className="hero-chips" aria-hidden="true">
+          <span>eBooks &amp; Programs</span>
+          <span>Instant Download</span>
           <span>Gym Equipment</span>
           <span>Activewear</span>
-          <span>Shapewear</span>
-          <span>Programs</span>
         </div>
         <div className="hero-actions">
-          <a className="btn-primary" href="#cardio">Shop Best Sellers ↓</a>
-          <a className="btn-ghost" href={SHOPIFY_DOMAIN} target="_blank" rel="noreferrer">
-            Visit Full Store ↗
-          </a>
+          <a className="btn-primary" href="#ebooks">Shop eBooks ↓</a>
+          <a className="btn-ghost" href="#cardio">Browse Gear →</a>
         </div>
         <div className="hero-scroll-cue" aria-hidden="true">
           <span className="cue-dot" /> scroll to enter the gym
@@ -148,6 +147,104 @@ function Hero() {
         <span className="hero-band-track">{BAND_TEXT.repeat(4)}</span>
       </div>
     </header>
+  )
+}
+
+const EBOOK_ACCENT = '#ff5c2d'
+
+function EbookShowcase() {
+  const ref = useRef(null)
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      ScrollTrigger.create({
+        trigger: ref.current,
+        start: 'top 55%',
+        end: 'bottom 55%',
+        onToggle: (self) => self.isActive && setSceneAccent(EBOOK_ACCENT)
+      })
+      gsap.from('.ebook-head > *', {
+        opacity: 0,
+        y: 40,
+        stagger: 0.1,
+        duration: 0.9,
+        ease: 'power3.out',
+        scrollTrigger: { trigger: ref.current, start: 'top 72%' }
+      })
+      gsap.from('.ebook-trust span', {
+        opacity: 0,
+        y: 16,
+        stagger: 0.08,
+        duration: 0.6,
+        ease: 'power2.out',
+        scrollTrigger: { trigger: '.ebook-trust', start: 'top 90%' }
+      })
+      gsap.utils.toArray('.ebook-card', ref.current).forEach((card, i) => {
+        gsap.from(card, {
+          opacity: 0,
+          y: 80,
+          rotateX: -5,
+          duration: 0.9,
+          delay: (i % 3) * 0.08,
+          ease: 'power3.out',
+          scrollTrigger: { trigger: card, start: 'top 92%' }
+        })
+      })
+    }, ref)
+    return () => ctx.revert()
+  }, [])
+
+  return (
+    <section className="ebooks" id="ebooks" ref={ref} style={{ '--accent': EBOOK_ACCENT }}>
+      <div className="cat-index" aria-hidden="true">📚</div>
+      <div className="ebook-head cat-head">
+        <p className="cat-kicker">Digital Library — Instant Download</p>
+        <h2>DreamBodX eBooks &amp; Programs</h2>
+        <p className="cat-blurb">
+          Science-backed weight-loss guides, muscle-building programs, and healthy cookbooks —
+          written for real results. Buy once, download instantly, and start today. No shipping,
+          no waiting, yours forever.
+        </p>
+      </div>
+
+      <div className="ebook-trust" role="list">
+        <span role="listitem">⚡ Instant PDF download</span>
+        <span role="listitem">🔒 Secure Shopify checkout</span>
+        <span role="listitem">📱 Read on any device</span>
+        <span role="listitem">♾️ Yours to keep forever</span>
+      </div>
+
+      <div className="ebook-grid">
+        {ebooks.map((book) => {
+          const href = `${SHOPIFY_DOMAIN}/cart/${book.checkoutVariant}:1`
+          const productHref = `${SHOPIFY_DOMAIN}/products/${book.handle}`
+          return (
+            <article className="ebook-card" key={book.id}>
+              <a className="ebook-cover" href={productHref} target="_blank" rel="noreferrer"
+                 aria-label={`${book.title} — view details`}>
+                <img src={book.image} alt={`${book.title} — DreamBodX Fitness eBook cover`} loading="lazy" />
+                {book.badge && <span className="ebook-badge">{book.badge}</span>}
+                <span className="ebook-tag">{book.tag}</span>
+              </a>
+              <div className="ebook-body">
+                <h3>{book.title}</h3>
+                <p className="ebook-blurb">{book.blurb}</p>
+                <ul className="ebook-bullets">
+                  {book.bullets.map((b) => (
+                    <li key={b}>{b}</li>
+                  ))}
+                </ul>
+                <div className="ebook-foot">
+                  <span className="ebook-price">{fmt(book.price)}</span>
+                  <a className="buy-btn ebook-buy" href={href} target="_blank" rel="noreferrer">
+                    Get Instant Access
+                  </a>
+                </div>
+              </div>
+            </article>
+          )
+        })}
+      </div>
+    </section>
   )
 }
 
@@ -317,6 +414,10 @@ function Collections() {
   )
 }
 
+// The eBooks now have their own dedicated showcase, so drop the small
+// "programs" category from the gear loop to avoid listing them twice.
+const gearCategories = categories.filter((c) => c.id !== 'programs')
+
 export default function App() {
   const canvasRef = useRef(null)
 
@@ -372,10 +473,11 @@ export default function App() {
       </nav>
       <Hero />
       <main>
-        {categories.map((c, i) => (
+        <EbookShowcase />
+        {gearCategories.map((c, i) => (
           <div key={c.id}>
             <CategorySection category={c} flip={i % 2 === 1} index={i} />
-            {i === 1 && <Marquee />}
+            {i === 0 && <Marquee />}
           </div>
         ))}
         <Collections />
