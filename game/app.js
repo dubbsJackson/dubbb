@@ -73,7 +73,7 @@ async function boot() {
 async function screenSplash() {
   const saved = await loadGame();
   app.innerHTML = `
-    ${brand}
+    <div class="splash-logo" role="img" aria-label="DreamBodX"></div>
     <div class="tag">${CONFIG.targetDays}-DAY TRANSFORMATION CHALLENGE</div>
     <div class="stage splash-stage bg-hero"><div class="avatar-wrap" id="titleAv"></div></div>
     <h1 class="hero-title">Build the body.<br><em>Beat the streak.</em></h1>

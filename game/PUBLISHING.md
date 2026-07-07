@@ -30,9 +30,16 @@ checklist.
 - [ ] Test in their QA harness: Poki → https://developers.poki.com/inspector · CrazyGames → the QA tool in the dev portal
 - [ ] Decide on the cross-sell link: both platforms restrict external links — keep the DreamBodX store card for self-hosted/web builds, hide it in portal builds if flagged
 
+### Marketing art (generated with Higgsfield — in `game/marketing/`)
+- `cover-16x9.webp` — wide key art (man + woman athletes). CrazyGames cover; upscale to 1920×1080 if the portal requires it.
+- `thumbnail-628.webp` — square flexing-hero key art for Poki (628×628; downscale to 314 as needed).
+- `icon-512.webp` — 512×512 app icon for CrazyGames.
+- The in-game logo lives at `game/assets/logo.webp` (shown on the splash).
+- Convert to PNG/JPG at upload time if a portal rejects WebP.
+
 ### Poki specifics (developers.poki.com)
 - [ ] Developer account + game submission with title, description, tags
-- [ ] Thumbnail: 314×314 and 628×628 JPG/PNG (no text-heavy art; they crop)
+- [ ] Thumbnail: 314×314 and 628×628 JPG/PNG (use `marketing/thumbnail-628.webp`; no text-heavy art; they crop)
 - [ ] Game must be playable in ~5 s on a mid-range phone (already true)
 - [ ] No forced login, no external redirects, no cookie banners
 - [ ] Rewarded ads are optional but boost revenue — `platform.js` is the place to add `rewardedBreak` (e.g. "watch ad → +1 energy")

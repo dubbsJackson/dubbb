@@ -66,6 +66,7 @@ button { font: inherit; color: inherit; }
 }
 .brand .name { font-family: 'Anton', Impact, sans-serif; font-size: 22px; letter-spacing: 1px; }
 .brand .name span { color: var(--burn); }
+.splash-logo { width: min(300px, 80%); aspect-ratio: 460 / 68; margin: 4px auto 2px; background: url('./assets/logo.webp') center / contain no-repeat; filter: drop-shadow(0 4px 14px rgba(255, 90, 60, .35)); }
 .tag { text-align: center; color: var(--dim); font-size: 12px; letter-spacing: 2px; text-transform: uppercase; font-weight: 800; margin: 4px 0 16px; }
 .tier-tag.tier-easy { color: var(--gain); }
 .tier-tag.tier-medium { color: var(--gold); }
