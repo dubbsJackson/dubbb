@@ -470,6 +470,10 @@ const STATION_POS = {
   bike:      { x: 78, y: 62 },
 };
 
+// perspective: further back in the room (smaller y) → smaller avatar, so walking
+// to a machine reads as stepping INTO the room, never floating up off the floor
+const gymDepth = y => (0.66 + (Math.max(24, Math.min(90, y)) - 24) / 66 * 0.4).toFixed(3);
+
 function screenGym(tierId, walkerPos = { x: 50, y: 88 }) {
   const tier = CONFIG.tiers[tierId];
   const place = PLACES.find(p => p.type === 'gym' && p.tier === tierId);
@@ -488,7 +492,7 @@ function screenGym(tierId, walkerPos = { x: 50, y: 88 }) {
           <span class="b-tag">${m.lbl} <em class="b-cost">⚡1</em></span>
         </button>`;
       }).join('')}
-      <div class="walker" id="walker" style="left:${walkerPos.x}%;top:${walkerPos.y}%">
+      <div class="walker" id="walker" style="left:${walkerPos.x}%;top:${walkerPos.y}%;transform:translate(-50%,-100%) scale(${gymDepth(walkerPos.y)})">
         <div class="walker-shadow"></div>
         ${avatarSVG(S.avatar, S.stats.muscle, S.stats.lean, { width: 52, height: 70 })}
       </div>
@@ -509,11 +513,12 @@ function screenGym(tierId, walkerPos = { x: 50, y: 88 }) {
     walker.classList.toggle('flip', x < curX - 0.5);
     const dist = Math.hypot(x - curX, y - curY);
     const dur = reduce ? 0 : Math.min(1400, 180 + dist * 20);
-    walker.style.transition = dur ? `left ${dur}ms linear, top ${dur}ms linear` : 'none';
+    walker.style.transition = dur ? `left ${dur}ms linear, top ${dur}ms linear, transform ${dur}ms linear` : 'none';
     walker.classList.add('walking');
     busy = true;
     walker.style.left = x + '%';
     walker.style.top = y + '%';
+    walker.style.transform = `translate(-50%,-100%) scale(${gymDepth(y)})`;
     let settled = false;
     const done = () => {
       if (settled) return;
