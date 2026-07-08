@@ -5,18 +5,16 @@ on:
     branches: [claude/dreambodyx-ebook-website-v8tn59, main]
   workflow_dispatch:
 
+# Publishing to a gh-pages branch (below) needs write access to repo contents.
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
-# Allow one concurrent deployment; don't cancel an in-progress run.
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
-  build:
+  build-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,19 +24,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - uses: actions/configure-pages@v5
+      # Pushes the built dist/ to a gh-pages branch. This works from any source
+      # branch (unlike the github-pages environment, which only allows the
+      # default branch). After the first run, enable Pages once in
+      # Settings -> Pages -> Source: "Deploy from a branch" -> gh-pages / (root).
+      - uses: peaceiris/actions-gh-pages@v4
         with:
-          enablement: true
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
