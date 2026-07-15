@@ -13,7 +13,7 @@ const BASE_LOCATION = { lat: 35.3859, lng: -94.3985 }; // Fort Smith, AR (72904)
 const PREMIUM_FEE = 9.99;
 const PREMIUM_RATE = 0.15; // 15% off the service fee only — fuel is always pump price
 const DRIVER_FEE = 8.99;
-const DRIVER_SHARE = 0.70; // drivers keep 70% of the service fee; fuel + tips are 100% theirs
+const DRIVER_SHARE = 0.60; // drivers keep 60% of the service fee (platform 40%); fuel + tips are 100% theirs
 
 const GAS_TYPES = [
     { id: 'regular',  name: 'Regular 87',  price: 3.29 },
@@ -1075,10 +1075,10 @@ const ASSISTANT_BRAIN = [
     { match: /code|pin|verify|prove/i, reply: () =>
         'Safety first 🔐 — every order gets a 4-digit code. When your driver arrives, it appears on your tracking screen. Say it to the driver; they can\'t start (or get paid for) the job without it. That way you know it\'s your driver, and they know it\'s you.' },
     { match: /paid|payout|payment.*(driver)|driver.*(paid|pay|earn|money|cut)|how do drivers/i, reply: () =>
-        'Drivers keep 70% of every service fee, get fuel costs reimbursed 100% on gas runs, and keep 100% of tips. The money hits their balance the instant the customer confirms the job is complete — no waiting for a weekly deposit. 💸' },
+        'Drivers keep 60% of every service fee, get fuel costs reimbursed 100% on gas runs, and keep 100% of tips. The money hits their balance the instant the customer confirms the job is complete — no waiting for a weekly deposit. 💸' },
     { match: /driver|earn|drive|job|money|sign.?up/i, reply: () =>
-        user.driverApproved ? 'You\'re already an approved driver! Switch to driver mode from your Account tab, flip yourself Online, and requests will start rolling in. 70% of every fare + 100% of tips, paid instantly. 💰'
-        : 'Drivers keep 70% of every fare ($24.50–$28+ per rescue), 100% of tips, and fuel is reimbursed on gas runs — all paid instantly when the job completes. One-time $8.99 registration covers your background check. Tap "Drive & Earn" on the role screen to apply.' },
+        user.driverApproved ? 'You\'re already an approved driver! Switch to driver mode from your Account tab, flip yourself Online, and requests will start rolling in. 60% of every fare + 100% of tips, paid instantly. 💰'
+        : 'Drivers keep 60% of every fare ($21–$24+ per rescue, more on longer trips), 100% of tips, and fuel is reimbursed on gas runs — all paid instantly when the job completes. One-time $8.99 registration covers your background check. Tap "Drive & Earn" on the role screen to apply.' },
     { match: /premium|member|subscri|worth/i, reply: () =>
         user.premium ? 'You\'re Premium already ⭐ — 15% comes off every service fee automatically. It\'s working right now.'
         : 'Premium is $9.99/mo for 15% off every service fee + priority matching and free cancellations. Order twice a month and it pays for itself. Try it from the Account tab.' },
