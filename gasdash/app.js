@@ -38,6 +38,13 @@ function serviceFee(svcKey, miles) {
 const driverCut = (fee) => Math.round(fee * DRIVER_SHARE * 100) / 100;
 const newPin = () => String(Math.floor(1000 + Math.random() * 9000));
 
+// ── Real payments (Stripe) ──
+// Deploy backend/worker.js (see backend/README.md), then paste its URL here,
+// e.g. 'https://gasdash-payments.YOURNAME.workers.dev'. Empty = demo checkout.
+const PAYMENT_API_URL = '';
+// (can also be overridden per-device: localStorage.setItem('gd2:paymentApi', 'https://…'))
+const PAYMENT_API = (localStorage.getItem('gd2:paymentApi') || PAYMENT_API_URL).replace(/\/$/, '');
+
 const DRIVER_NAMES = ['Marcus T.', 'Sarah K.', 'Devon R.', 'Alicia M.', 'James P.', 'Rosa G.', 'Tyler B.', 'Nina V.'];
 const DRIVER_CARS = ['Black Ford F-150', 'White Chevy Silverado', 'Silver Toyota Tacoma', 'Red RAM 1500', 'Blue Honda Ridgeline', 'Gray GMC Sierra'];
 const CUSTOMER_NAMES = ['Jordan W.', 'Emily C.', 'Mike D.', 'Tanya R.', 'Chris L.', 'Ashley B.'];
@@ -170,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const email = Store.session();
         if (email && Store.get(email)) {
             user = Store.get(email);
-            enterRoleHub();
+            if (!handleCheckoutReturn()) enterRoleHub();
         } else {
             show('auth');
         }
@@ -407,8 +414,74 @@ function wireOrderBuilder() {
     $('order-submit').addEventListener('click', () => {
         draft.notes = $('order-notes').value.trim();
         const p = priceDraft();
+        if (PAYMENT_API) return startRealCheckout();
         openPayModal(`${SERVICES[draft.service].icon} ${SERVICES[draft.service].name}`, p, () => placeOrder(p));
     });
+}
+
+/* ── Real checkout via Stripe (when PAYMENT_API is configured) ──────── */
+
+async function startRealCheckout() {
+    const btn = $('order-submit');
+    const prevHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.textContent = 'Opening secure checkout…';
+    try {
+        // remember the order so we can resume when Stripe sends the customer back
+        localStorage.setItem('gd2:pendingCheckout', JSON.stringify({ draft, ts: Date.now() }));
+        const res = await fetch(`${PAYMENT_API}/api/checkout`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                service: draft.service,
+                gasType: draft.gasType,
+                gallons: draft.gallons,
+                distanceMiles: draft.driverDistance,
+                premium: !!user.premium,
+                notes: draft.notes,
+            }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.url) throw new Error(data.error || 'could not start checkout');
+        window.location.assign(data.url); // → Stripe's hosted payment page
+    } catch (err) {
+        localStorage.removeItem('gd2:pendingCheckout');
+        toast(`Payment error: ${err.message}`);
+        btn.disabled = false;
+        btn.innerHTML = prevHtml;
+        recalc();
+    }
+}
+
+// Handles ?checkout=success|cancel when Stripe redirects back to the app.
+// Returns true when it took over navigation (an order is being resumed).
+function handleCheckoutReturn() {
+    const params = new URLSearchParams(location.search);
+    const state = params.get('checkout');
+    if (!state) return false;
+    const sessionId = params.get('session_id');
+    history.replaceState(null, '', location.pathname);
+    const pendingRaw = localStorage.getItem('gd2:pendingCheckout');
+    localStorage.removeItem('gd2:pendingCheckout');
+
+    if (state === 'cancel') {
+        toast('Checkout cancelled — you have not been charged');
+        return false;
+    }
+    if (state !== 'success' || !sessionId || !pendingRaw || !PAYMENT_API) return false;
+
+    draft = JSON.parse(pendingRaw).draft;
+    mode = 'customer';
+    enterCustomer();
+    toast('Confirming your payment…', 'ok');
+    fetch(`${PAYMENT_API}/api/checkout?session_id=${encodeURIComponent(sessionId)}`)
+        .then((r) => r.json())
+        .then((d) => {
+            if (d.paid) placeOrder(priceDraft());
+            else toast('Payment not completed — you have not been charged');
+        })
+        .catch(() => toast('Could not confirm payment — check your email for a Stripe receipt'));
+    return true;
 }
 
 /* ── Checkout modal ─────────────────────────────────────── */
@@ -684,7 +757,9 @@ function wireAccount() {
             else show('driver-intro');
         } else enterCustomer();
     });
-    $('account-payment').addEventListener('click', () => toast('💳 Demo wallet: Visa •••• 4242'));
+    $('account-payment').addEventListener('click', () => toast(PAYMENT_API
+        ? '💳 Cards are handled securely by Stripe at checkout'
+        : '💳 Demo wallet: Visa •••• 4242'));
     $('account-assistant').addEventListener('click', openAssistant);
     $('account-install').addEventListener('click', async () => {
         if (!deferredInstall) return;
