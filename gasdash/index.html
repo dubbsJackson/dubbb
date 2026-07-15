@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>GasDash — Roadside Assistance On-Demand</title>
-    <meta name="description" content="GasDash delivers fuel, jump starts, tire service, lockout help and more — straight to your car, 24/7. Or drive with GasDash and earn on your schedule.">
+    <meta name="description" content="GasDash delivers gas and jump starts straight to your car, 24/7, with live driver tracking. Or drive with GasDash — keep 70% of every fare plus all tips, paid instantly.">
     <meta name="theme-color" content="#0B0B0F">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="icon.svg">
     <meta property="og:title" content="GasDash — Roadside Assistance On-Demand">
-    <meta property="og:description" content="Out of gas? Dead battery? Flat tire? Help arrives in minutes. One app, two modes: get help or drive & earn.">
+    <meta property="og:description" content="Out of gas? Dead battery? Help arrives in minutes with live map tracking. One app, two modes: get help or drive & earn.">
     <meta property="og:type" content="website">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -39,9 +39,9 @@
             <div class="auth-hero">
                 <svg viewBox="0 0 64 64" class="bolt-logo sm"><path d="M36 4 12 36h14l-4 24 26-34H32l4-22z" fill="#DC143C"/></svg>
                 <h1 class="logo-text">Gas<span>Dash</span></h1>
-                <p class="auth-sub">Get rescued — or be the rescuer.</p>
+                <p class="auth-sub">Out of gas? Dead battery? Help is minutes away.</p>
                 <div class="hero-badges">
-                    <span class="hero-badge">⛽ Fuel</span><span class="hero-badge">🔋 Jump</span><span class="hero-badge">🛞 Tires</span><span class="hero-badge">🔑 Lockout</span><span class="hero-badge">🪝 Tow</span><span class="hero-badge">⚡ EV</span>
+                    <span class="hero-badge">⛽ Gas delivered</span><span class="hero-badge">🔋 Jump starts</span><span class="hero-badge">📍 Live tracking</span><span class="hero-badge">🔐 PIN verified</span><span class="hero-badge">💸 Drivers paid instantly</span>
                 </div>
             </div>
             <div class="auth-card">
@@ -75,13 +75,13 @@
                     <button class="role-card" id="role-customer">
                         <div class="role-emoji">🆘</div>
                         <h3>Get Help</h3>
-                        <p>Fuel, jump starts, tires & more delivered to your car</p>
+                        <p>Gas delivery & jump starts, straight to your car</p>
                         <span class="chip" id="chip-membership">Standard</span>
                     </button>
                     <button class="role-card" id="role-driver">
                         <div class="role-emoji">🚗</div>
                         <h3>Drive &amp; Earn</h3>
-                        <p>Rescue stranded drivers, get paid instantly</p>
+                        <p>Keep 70% of every fare + all tips, paid instantly</p>
                         <span class="chip" id="chip-driver">Not a driver yet</span>
                     </button>
                 </div>
@@ -136,19 +136,12 @@
                     </div>
                     <label class="field"><span>Notes for driver (optional)</span><input type="text" id="order-notes" placeholder="Silver Honda Civic, shoulder of I-540 North…" maxlength="120"></label>
                 </div>
-                <div class="card">
-                    <h3 class="card-title">🏷️ Promo code</h3>
-                    <div class="promo-row">
-                        <input type="text" id="promo-input" placeholder="WELCOME10" autocapitalize="characters">
-                        <button class="btn btn-ghost btn-sm" id="promo-apply">Apply</button>
-                    </div>
-                    <p class="promo-msg" id="promo-msg"></p>
-                </div>
                 <div class="card price-card">
                     <h3 class="card-title">Price breakdown</h3>
                     <div id="price-rows"></div>
                     <div class="price-total"><span>Total</span><b id="price-total">$0.00</b></div>
                     <p class="fineprint" id="premium-nudge" hidden>⭐ Premium members would save <b id="premium-nudge-amt"></b> on this order</p>
+                    <p class="fineprint">💚 Your driver receives 70% of the service fee, 100% of fuel costs, and 100% of any tip.</p>
                 </div>
             </div>
             <div class="cta-dock">
@@ -186,7 +179,13 @@
                         <button class="iconbtn round" id="track-msg" aria-label="Message driver">💬</button>
                     </div>
                 </div>
+                <div class="pin-card" id="track-pin-card" hidden>
+                    <span class="pin-label">🔐 Your verification code — say it to your driver</span>
+                    <b class="pin-digits" id="track-pin">0000</b>
+                    <span class="pin-hint">Your driver can't complete the job without it</span>
+                </div>
                 <div class="card slim" id="track-summary"></div>
+                <button class="btn btn-primary btn-block btn-lg" id="track-confirm" hidden>✓ Job complete — finish order</button>
                 <button class="btn btn-danger-ghost btn-block" id="track-cancel">Cancel order</button>
             </div>
         </section>
@@ -233,7 +232,7 @@
                 <div class="card gold-border">
                     <div class="price-line"><b class="bigprice">$9.99</b><span>/month</span></div>
                     <ul class="ticks">
-                        <li>15% off all services, always</li>
+                        <li>15% off every service fee, always</li>
                         <li>Priority driver matching</li>
                         <li>Free cancellations</li>
                         <li>24/7 priority support</li>
@@ -242,9 +241,9 @@
                 </div>
                 <div class="card">
                     <h3 class="card-title">Your savings preview</h3>
-                    <div class="save-row"><span>⛽ Gas delivery ($38.16)</span><b class="accent-green">−$5.72</b></div>
-                    <div class="save-row"><span>🔋 Jump start ($30.00)</span><b class="accent-green">−$4.50</b></div>
-                    <div class="save-row"><span>🪝 Tow 10 mi ($105.00)</span><b class="accent-green">−$15.75</b></div>
+                    <div class="save-row"><span>⛽ Gas delivery ($35 fee)</span><b class="accent-green">−$5.25</b></div>
+                    <div class="save-row"><span>🔋 Jump start ($40 fee)</span><b class="accent-green">−$6.00</b></div>
+                    <p class="fineprint">15% off the service fee on every order. Fuel is always charged at pump price.</p>
                 </div>
             </div>
             <div class="cta-dock">
@@ -262,13 +261,23 @@
             <div class="scroll-body">
                 <div class="premium-hero red">
                     <div class="premium-star">🚗</div>
-                    <h2>Earn $25–$50<br>per rescue</h2>
-                    <p>Keep 100% of tips · Instant payout</p>
+                    <h2>Keep 70% of<br>every fare</h2>
+                    <p>Plus <b>100% of tips</b> · Paid the second the job is done</p>
                 </div>
                 <div class="stat-trio">
-                    <div><b>$31</b><span>avg. job</span></div>
+                    <div><b>$25–45</b><span>per rescue</span></div>
                     <div><b>100%</b><span>tips kept</span></div>
                     <div><b>Instant</b><span>payout</span></div>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">How you get paid</h3>
+                    <ul class="ticks">
+                        <li>70% of every service fee is yours</li>
+                        <li>Gas runs: fuel cost reimbursed 100%</li>
+                        <li>Longer trips pay more — $2/mile added to the fare</li>
+                        <li>Tips are 100% yours, always</li>
+                        <li>Money hits your balance the moment you finish</li>
+                    </ul>
                 </div>
                 <div class="card">
                     <h3 class="card-title">Requirements</h3>
@@ -427,6 +436,17 @@
             <div class="modal-btns">
                 <button class="btn btn-ghost" id="req-decline">Decline</button>
                 <button class="btn btn-primary" id="req-accept">Accept</button>
+            </div>
+        </div>
+
+        <div class="modal" id="modal-pin" hidden>
+            <h3>🔐 Verify customer</h3>
+            <p class="muted center">Ask the customer for their 4-digit code before starting the job.</p>
+            <input type="text" class="pin-input" id="pin-input" inputmode="numeric" maxlength="4" placeholder="••••" autocomplete="one-time-code">
+            <p class="promo-msg bad center" id="pin-error"></p>
+            <div class="modal-btns">
+                <button class="btn btn-ghost" id="pin-cancel">Back</button>
+                <button class="btn btn-primary" id="pin-confirm">Verify</button>
             </div>
         </div>
 
