@@ -3,10 +3,17 @@ main = "worker.js"
 compatibility_date = "2026-01-01"
 
 [vars]
-# Where the app lives (customers are sent back here after paying)
+# Where the app lives (customers and drivers are sent back here from Stripe)
 APP_URL = "https://dubbsjackson.github.io/dubbb/gasdash/"
 # Only this origin may call the API from a browser
 ALLOWED_ORIGIN = "https://dubbsjackson.github.io"
+
+# Order dispatch storage. Create it once with:
+#   npx wrangler kv namespace create ORDERS
+# then paste the printed id below (replace REPLACE_WITH_YOUR_KV_ID).
+[[kv_namespaces]]
+binding = "ORDERS"
+id = "REPLACE_WITH_YOUR_KV_ID"
 
 # The Stripe secret key is NOT set here — it's a secret:
 #   npx wrangler secret put STRIPE_SECRET_KEY

@@ -36,7 +36,7 @@ function serviceFee(svcKey, miles) {
 }
 
 const driverCut = (fee) => Math.round(fee * DRIVER_SHARE * 100) / 100;
-const newPin = () => String(Math.floor(1000 + Math.random() * 9000));
+const newPin = () => String(Math.floor(100000 + Math.random() * 900000));
 
 // ── Real payments (Stripe) ──
 // Deploy backend/worker.js (see backend/README.md), then paste its URL here,
@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const email = Store.session();
         if (email && Store.get(email)) {
             user = Store.get(email);
-            if (!handleCheckoutReturn()) enterRoleHub();
+            if (!handleConnectReturn() && !handleCheckoutReturn()) enterRoleHub();
         } else {
             show('auth');
         }
@@ -477,12 +477,73 @@ function handleCheckoutReturn() {
     fetch(`${PAYMENT_API}/api/checkout?session_id=${encodeURIComponent(sessionId)}`)
         .then((r) => r.json())
         .then((d) => {
-            if (d.paid) placeOrder(priceDraft());
+            if (d.paid) placeOrder(priceDraft(), { sessionId, pin: d.pin });
             else toast('Payment not completed — you have not been charged');
         })
         .catch(() => toast('Could not confirm payment — check your email for a Stripe receipt'));
     return true;
 }
+
+// Handles ?connect=return|refresh when a driver comes back from Stripe
+// bank onboarding. Returns true when it took over navigation.
+function handleConnectReturn() {
+    const params = new URLSearchParams(location.search);
+    const state = params.get('connect');
+    if (!state) return false;
+    const accountId = params.get('account_id');
+    history.replaceState(null, '', location.pathname);
+    if (!accountId || !PAYMENT_API || !user) return false;
+
+    user.stripeAccountId = accountId;
+    save();
+    mode = 'driver';
+    enterDriver();
+
+    if (state === 'refresh') {
+        toast('Bank setup wasn\'t finished — tap "Set up" to continue');
+        return true;
+    }
+    toast('Checking your payout setup…', 'ok');
+    fetch(`${PAYMENT_API}/api/driver/status?account_id=${encodeURIComponent(accountId)}`)
+        .then((r) => r.json())
+        .then((d) => {
+            user.payoutReady = d.ready === true;
+            save();
+            renderDriverStats();
+            toast(d.ready
+                ? '💸 Payouts are LIVE — you\'ll be paid instantly after every job'
+                : 'Almost there — Stripe needs a bit more info. Tap "Set up" to finish.', d.ready ? 'ok' : '');
+        })
+        .catch(() => toast('Could not check payout status — try again in a minute'));
+    return true;
+}
+
+/* Driver bank onboarding (Stripe Connect Express) */
+async function startDriverOnboarding() {
+    const btn = $('driver-payout-setup');
+    btn.disabled = true;
+    btn.textContent = 'Opening…';
+    try {
+        const res = await fetch(`${PAYMENT_API}/api/driver/onboard`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ account_id: user.stripeAccountId || undefined, email: user.email }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.url) throw new Error(data.error || 'could not start onboarding');
+        user.stripeAccountId = data.account_id;
+        if (data.token) user.driverToken = data.token;
+        save();
+        window.location.assign(data.url); // → Stripe-hosted bank onboarding
+    } catch (err) {
+        toast(`Payout setup error: ${err.message}`);
+        btn.disabled = false;
+        btn.textContent = 'Set up';
+    }
+}
+
+// Live mode = real dispatch + real payouts (needs a payment server + connected bank)
+const liveDriver = () => !!(PAYMENT_API && user?.payoutReady && user?.driverToken);
 
 /* ── Checkout modal ─────────────────────────────────────── */
 
@@ -510,14 +571,16 @@ let trackTimers = [];
 function clearTrackTimers() { trackTimers.forEach(clearTimeout); trackTimers = []; }
 const later = (fn, ms) => trackTimers.push(setTimeout(fn, ms));
 
-function placeOrder(pricing) {
+function placeOrder(pricing, real = null) {
     const d = draft;
     active = {
-        id: 'GD' + Date.now().toString(36).toUpperCase(),
+        id: real ? real.sessionId.slice(-8).toUpperCase() : 'GD' + Date.now().toString(36).toUpperCase(),
         service: d.service,
         pricing,
         notes: d.notes,
-        pin: newPin(),
+        pin: real?.pin || newPin(),
+        sessionId: real?.sessionId || null,
+        real: !!real,
         placedAt: Date.now(),
         step: 0,
         statusLabel: STATUS_LABELS[0],
@@ -547,23 +610,20 @@ function startTracking() {
     if (markers.trackCar) { markers.trackCar.remove(); markers.trackCar = null; }
     if (markers.trackLine) { markers.trackLine.remove(); markers.trackLine = null; }
 
-    // 1) find driver
+    $('track-real-hint').hidden = true;
+    if (active.real) {
+        $('track-cancel').hidden = true; // paid orders: refunds handled by support
+        pollRealOrder();
+        return;
+    }
+
+    // ── demo simulation ──
     later(() => {
-        active.driver = {
+        showAssignedDriver({
             name: pick(DRIVER_NAMES),
             car: pick(DRIVER_CARS),
             rating: (4.7 + Math.random() * 0.3).toFixed(2),
-        };
-        setStep(1);
-        const dc = $('track-driver-card');
-        dc.hidden = false;
-        $('track-driver-avatar').textContent = active.driver.name[0];
-        $('track-driver-name').textContent = active.driver.name;
-        $('track-driver-vehicle').textContent = active.driver.car;
-        $('track-driver-rating').textContent = `★ ${active.driver.rating}`;
-        toast(`${active.driver.name} accepted your request 🚗`, 'ok');
-
-        // 2) en route — animate car toward user
+        });
         later(() => {
             setStep(2);
             animateDriverIn();
@@ -571,7 +631,43 @@ function startTracking() {
     }, rand(2500, 4500));
 }
 
-function animateDriverIn() {
+function showAssignedDriver(driver) {
+    active.driver = driver;
+    setStep(1);
+    $('track-driver-card').hidden = false;
+    $('track-driver-avatar').textContent = driver.name[0];
+    $('track-driver-name').textContent = driver.name;
+    $('track-driver-vehicle').textContent = driver.car;
+    $('track-driver-rating').textContent = `★ ${driver.rating}`;
+    toast(`${driver.name} accepted your request 🚗`, 'ok');
+}
+
+// Real orders: the server is the source of truth — poll it and mirror the status.
+function pollRealOrder() {
+    let last = 'open';
+    const iv = setInterval(async () => {
+        if (!active) return clearInterval(iv);
+        let status;
+        try {
+            const r = await fetch(`${PAYMENT_API}/api/orders/status?session_id=${encodeURIComponent(active.sessionId)}`);
+            status = (await r.json()).status;
+        } catch { return; } // transient network error — keep polling
+        if (!status || status === last) return;
+        last = status;
+        if (status === 'assigned' && active.step < 2) {
+            showAssignedDriver({ name: 'Your GasDash driver', car: 'Verified driver', rating: '✓' });
+            setStep(2);
+            animateDriverIn(true); // car animates in but arrival waits for the server
+        } else if (status === 'arrived' && active.step < 3) {
+            driverArrived();
+        } else if ((status === 'paid' || status === 'payout_failed') && active.step < 4) {
+            completeOrder();
+        }
+    }, 4000);
+    trackTimers.push(iv);
+}
+
+function animateDriverIn(holdArrival = false) {
     const ang = Math.random() * Math.PI * 2;
     const dist = 0.028; // ~2 miles
     let carPos = { lat: myLoc.lat + Math.sin(ang) * dist, lng: myLoc.lng + Math.cos(ang) * dist };
@@ -588,14 +684,16 @@ function animateDriverIn() {
     const iv = setInterval(() => {
         elapsed++;
         if (!active) return clearInterval(iv);
-        const f = elapsed / totalSecs;
+        // real orders: creep to 90% and hold until the server reports arrival
+        const f = holdArrival ? Math.min(0.9, elapsed / totalSecs) : elapsed / totalSecs;
         const lat = carPos.lat + (myLoc.lat - carPos.lat) * f;
         const lng = carPos.lng + (myLoc.lng - carPos.lng) * f + Math.sin(elapsed * 1.3) * 0.0006 * (1 - f);
         markers.trackCar.setLatLng([lat, lng]);
         markers.trackLine.setLatLngs([[lat, lng], [myLoc.lat, myLoc.lng]]);
         const etaMin = Math.max(0, Math.ceil((1 - f) * 8));
         $('track-eta').textContent = etaMin <= 0 ? 'arriving' : `${etaMin} min`;
-        if (elapsed >= totalSecs) {
+        if (active.step >= 3) return clearInterval(iv);
+        if (!holdArrival && elapsed >= totalSecs) {
             clearInterval(iv);
             driverArrived();
         }
@@ -607,12 +705,14 @@ function driverArrived() {
     if (!active) return;
     setStep(3);
     $('track-eta').textContent = 'here now';
-    // show the verification code + let the customer close out the job
+    // show the verification code
     $('track-pin').textContent = active.pin;
     $('track-pin-card').hidden = false;
     $('track-cancel').hidden = true;
-    $('track-confirm').hidden = false;
-    toast(`${active.driver.name} has arrived — give them your code 🔐`, 'ok');
+    // demo: customer closes the job; real: the driver closes it by entering the code
+    $('track-confirm').hidden = active.real;
+    $('track-real-hint').hidden = !active.real;
+    toast(`${active.driver?.name || 'Your driver'} has arrived — give them your code 🔐`, 'ok');
     if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
 }
 
@@ -621,8 +721,13 @@ function completeOrder() {
     setStep(4);
     $('track-confirm').hidden = true;
     $('track-pin-card').hidden = true;
-    const payout = driverCut(active.pricing.fee) + active.pricing.fuel;
-    toast(`Job complete ✅ ${active.driver.name} was paid ${money(payout)} instantly`, 'ok');
+    $('track-real-hint').hidden = true;
+    if (active.real) {
+        toast('Job complete ✅ Your driver has been paid instantly', 'ok');
+    } else {
+        const payout = driverCut(active.pricing.fee) + active.pricing.fuel;
+        toast(`Job complete ✅ ${active.driver.name} was paid ${money(payout)} instantly`, 'ok');
+    }
     later(() => openRating(), 900);
 }
 
@@ -661,9 +766,13 @@ function wireTracking() {
 let rateVal = 5, tipVal = 5;
 
 function openRating() {
-    rateVal = 5; tipVal = 5;
-    $('rate-avatar').textContent = active.driver.name[0];
-    $('rate-name').textContent = active.driver.name.split(' ')[0];
+    rateVal = 5;
+    tipVal = active.real ? 0 : 5; // card tips come with the Connect tip phase — cash for now
+    $('rate-avatar').textContent = active.driver?.name?.[0] || 'D';
+    $('rate-name').textContent = active.real ? 'your driver' : active.driver.name.split(' ')[0];
+    $('rate-tips').hidden = active.real;
+    $('rate-tip-label').hidden = active.real;
+    $('rate-tip-note').hidden = !active.real;
     paintStars();
     $$('#rate-tips button').forEach((b) => b.classList.toggle('active', +b.dataset.tip === tipVal));
     openModal('modal-rate');
@@ -881,6 +990,13 @@ function renderDriverStats() {
     $('driver-hours').textContent = `${hours.toFixed(1)}h`;
     const r = user.stats.ratingCount ? user.stats.ratingSum / user.stats.ratingCount : 5;
     $('driver-rating').textContent = `${r.toFixed(1)}★`;
+
+    // payout setup + live/practice indicator
+    $('driver-payout-banner').hidden = !PAYMENT_API || liveDriver();
+    const chip = $('driver-mode-chip');
+    chip.hidden = !PAYMENT_API;
+    chip.textContent = liveDriver() ? '🟢 LIVE' : 'PRACTICE';
+    chip.classList.toggle('green', liveDriver());
 }
 
 const isToday = (p) => new Date(p.at).toDateString() === new Date().toDateString();
@@ -896,13 +1012,20 @@ function wireDriver() {
             : "You're offline. Go online to receive rescue requests.";
         if (driverState.online) {
             driverState.onlineSince = driverState.onlineSince || Date.now();
-            toast('You\'re online — watching for requests 📡', 'ok');
-            queueRequest(rand(4000, 8000));
+            if (liveDriver()) {
+                toast('You\'re LIVE — watching for real requests 📡', 'ok');
+                startLivePolling();
+            } else {
+                toast(PAYMENT_API ? 'Practice mode — set up payouts to take live jobs' : 'You\'re online — watching for requests 📡', 'ok');
+                queueRequest(rand(4000, 8000));
+            }
         } else {
             clearTimeout(driverState.requestTimer);
+            clearInterval(driverState.pollTimer);
         }
     });
     $('driver-assistant').addEventListener('click', openAssistant);
+    $('driver-payout-setup').addEventListener('click', startDriverOnboarding);
 
     // request modal
     $('req-accept').addEventListener('click', acceptRequest);
@@ -910,7 +1033,9 @@ function wireDriver() {
         closeModals();
         stopReqCountdown();
         toast('Request declined');
-        queueRequest(rand(6000, 12000));
+        if (pendingReq?.real) passedOrders.set(pendingReq.sessionId, Date.now());
+        else queueRequest(rand(6000, 12000));
+        pendingReq = null;
     });
 
     $('job-action').addEventListener('click', advanceJob);
@@ -923,6 +1048,7 @@ function wireDriver() {
 
 function stopDriverSim() {
     clearTimeout(driverState.requestTimer);
+    clearInterval(driverState.pollTimer);
     stopReqCountdown();
     driverState = { online: false, onlineSince: null, requestTimer: null };
     const t = $('driver-online');
@@ -941,8 +1067,66 @@ function queueRequest(delay) {
 }
 
 let pendingReq = null, reqInterval = null;
+const passedOrders = new Map(); // sessionId → time declined/expired (re-offer after 90s)
 
-function showIncomingRequest() {
+/* Live dispatch: poll the server for real paid orders */
+function startLivePolling() {
+    clearInterval(driverState.pollTimer);
+    const poll = async () => {
+        if (!driverState.online || job || pendingReq) return;
+        try {
+            const r = await fetch(`${PAYMENT_API}/api/orders/open`, { headers: { 'X-Driver-Token': user.driverToken } });
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.error || 'poll failed');
+            const next = (d.orders || []).find((o) => (Date.now() - (passedOrders.get(o.sessionId) || 0)) > 90000);
+            if (next) showIncomingRequest(next);
+        } catch (err) {
+            // stay online; surface persistent auth problems once
+            if (String(err.message).includes('authorized')) {
+                toast('Payout setup expired — tap "Set up" to reconnect');
+                $('driver-online').checked = false;
+                $('driver-online').dispatchEvent(new Event('change'));
+            }
+        }
+    };
+    driverState.pollTimer = setInterval(poll, 7000);
+    poll();
+}
+
+function showIncomingRequest(realOrder = null) {
+    if (realOrder) {
+        const s = SERVICES[realOrder.service];
+        pendingReq = {
+            real: true,
+            sessionId: realOrder.sessionId,
+            service: realOrder.service,
+            customer: 'Verified customer',
+            address: realOrder.notes || 'See map after accepting',
+            distance: Number(realOrder.distanceMiles) || 0,
+            fuel: realOrder.gallons ? Math.round((GAS_TYPES.find((g) => g.id === realOrder.gasType)?.price || 3.29) * realOrder.gallons * 100) / 100 : 0,
+            fee: null,
+            payout: realOrder.driverAmount,
+            notes: realOrder.notes || '',
+            gallons: realOrder.gallons, gasType: realOrder.gasType,
+        };
+        $('req-service').textContent = `${s.icon} ${s.name} — LIVE request`;
+        $('req-customer').textContent = pendingReq.customer;
+        $('req-distance').textContent = `${pendingReq.distance.toFixed(1)} mi away`;
+        $('req-payout').textContent = money(pendingReq.payout) + (pendingReq.fuel ? ' (incl. fuel reimbursed)' : '');
+        openModal('modal-request');
+        if (navigator.vibrate) navigator.vibrate([100, 60, 100]);
+        startReqCountdown(() => {
+            passedOrders.set(pendingReq?.sessionId, Date.now());
+            closeModals();
+            pendingReq = null;
+            toast('Request expired');
+        });
+        return;
+    }
+    demoIncomingRequest();
+}
+
+function demoIncomingRequest() {
     const svcKey = pick(Object.keys(SERVICES));
     const s = SERVICES[svcKey];
     const distance = rand(1, 11);
@@ -969,7 +1153,15 @@ function showIncomingRequest() {
     $('req-payout').textContent = `${money(driverCut(fee))}${fuelLabel}`;
     openModal('modal-request');
     if (navigator.vibrate) navigator.vibrate([100, 60, 100]);
+    startReqCountdown(() => {
+        closeModals();
+        pendingReq = null;
+        toast('Request expired');
+        queueRequest(rand(6000, 12000));
+    });
+}
 
+function startReqCountdown(onExpire) {
     let left = 15;
     $('req-count').textContent = left;
     $('req-ring').style.strokeDashoffset = 0;
@@ -979,19 +1171,35 @@ function showIncomingRequest() {
         $('req-ring').style.strokeDashoffset = 126 * (1 - left / 15);
         if (left <= 0) {
             stopReqCountdown();
-            closeModals();
-            toast('Request expired');
-            queueRequest(rand(6000, 12000));
+            onExpire();
         }
     }, 1000);
 }
 
 function stopReqCountdown() { clearInterval(reqInterval); reqInterval = null; }
 
-function acceptRequest() {
+async function acceptRequest() {
     stopReqCountdown();
     closeModals();
-    job = { ...pendingReq, stage: 0, pin: newPin() };
+    if (pendingReq?.real) {
+        try {
+            const r = await fetch(`${PAYMENT_API}/api/orders/accept`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Driver-Token': user.driverToken },
+                body: JSON.stringify({ session_id: pendingReq.sessionId }),
+            });
+            const d = await r.json();
+            if (!r.ok) {
+                passedOrders.set(pendingReq.sessionId, Date.now());
+                pendingReq = null;
+                return toast(d.error === 'order already taken' ? 'Another driver got there first' : `Could not accept: ${d.error}`);
+            }
+        } catch {
+            pendingReq = null;
+            return toast('Network hiccup — could not accept, will keep watching');
+        }
+    }
+    job = { ...pendingReq, stage: 0, pin: pendingReq.real ? null : newPin() };
     pendingReq = null;
     $('driver-idle').hidden = true;
     $('driver-job').hidden = false;
@@ -1019,11 +1227,20 @@ function advanceJob() {
         toast('Navigation started (demo) 🧭');
     } else if (job.stage === 1) {
         job.stage = 2;
-        $('job-action').textContent = '🔐 Enter customer\'s code';
+        $('job-action').textContent = job.real ? '🔐 Enter code & finish job' : '🔐 Enter customer\'s code';
         toast('Customer notified you\'ve arrived 📍', 'ok');
-        // in the real app the customer reads their code off their screen
-        const j = job;
-        setTimeout(() => { if (job === j) toast(`${j.customer}: "My code is ${j.pin}"`, 'ok'); }, 1500);
+        if (job.real) {
+            // tell the server — the customer's tracking flips to "arrived" and shows their code
+            fetch(`${PAYMENT_API}/api/orders/arrived`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Driver-Token': user.driverToken },
+                body: JSON.stringify({ session_id: job.sessionId }),
+            }).catch(() => {});
+        } else {
+            // demo: the pretend customer reads their code out loud
+            const j = job;
+            setTimeout(() => { if (job === j) toast(`${j.customer}: "My code is ${j.pin}"`, 'ok'); }, 1500);
+        }
     } else if (job.stage === 2) {
         $('pin-input').value = '';
         $('pin-error').textContent = '';
@@ -1034,8 +1251,41 @@ function advanceJob() {
     }
 }
 
-function verifyJobPin() {
-    if ($('pin-input').value.trim() !== job.pin) {
+async function verifyJobPin() {
+    const code = $('pin-input').value.trim();
+
+    if (job.real) {
+        // The spoken code IS the payout authorization — the server verifies it,
+        // then transfers 60% of the fee + 100% of fuel straight to the driver's bank.
+        const btn = $('pin-confirm');
+        btn.disabled = true;
+        try {
+            const r = await fetch(`${PAYMENT_API}/api/orders/complete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Driver-Token': user.driverToken },
+                body: JSON.stringify({ session_id: job.sessionId, pin: code }),
+            });
+            const d = await r.json();
+            btn.disabled = false;
+            if (r.status === 403) {
+                $('pin-error').textContent = 'Wrong code — ask the customer again';
+                if (navigator.vibrate) navigator.vibrate(120);
+                return;
+            }
+            if (!r.ok && !d.payout_pending) {
+                $('pin-error').textContent = d.error || 'Something went wrong — try again';
+                return;
+            }
+            closeModals();
+            finishRealJob(job.payout, !!d.payout_pending);
+        } catch {
+            btn.disabled = false;
+            $('pin-error').textContent = 'Network hiccup — try again';
+        }
+        return;
+    }
+
+    if (code !== job.pin) {
         $('pin-error').textContent = 'Wrong code — ask the customer again';
         if (navigator.vibrate) navigator.vibrate(120);
         return;
@@ -1044,6 +1294,24 @@ function verifyJobPin() {
     job.stage = 3;
     $('job-action').textContent = `Complete job · collect ${money(job.payout)}`;
     toast('Customer verified ✓ — do your thing', 'ok');
+}
+
+// A live job just completed — the money already moved server-side.
+function finishRealJob(amount, payoutPending) {
+    user.payouts.unshift({ service: job.service, amount, tip: 0, at: Date.now(), customer: job.customer });
+    user.stats.earned += amount;
+    user.stats.trips++;
+    user.week[new Date().getDay()] += amount;
+    save();
+    if (job.mapPin) job.mapPin.remove();
+    job = null;
+    $('driver-job').hidden = true;
+    $('driver-idle').hidden = false;
+    renderDriverStats();
+    toast(payoutPending
+        ? `Job complete ✅ ${money(amount)} payout is queued — it retries automatically`
+        : `💰 Paid to your bank instantly: +${money(amount)}`, payoutPending ? '' : 'ok');
+    if (navigator.vibrate) navigator.vibrate([60, 30, 60]);
 }
 
 function finishJob() {
