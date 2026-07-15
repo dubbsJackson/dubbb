@@ -10,10 +10,10 @@
 /* ── Config ─────────────────────────────────────────────── */
 
 const BASE_LOCATION = { lat: 35.3859, lng: -94.3985 }; // Fort Smith, AR (72904)
-const TIRE_CLOSE = { h: 22, m: 30 };
 const PREMIUM_FEE = 9.99;
-const PREMIUM_RATE = 0.15;
+const PREMIUM_RATE = 0.15; // 15% off the service fee only — fuel is always pump price
 const DRIVER_FEE = 8.99;
+const DRIVER_SHARE = 0.70; // drivers keep 70% of the service fee; fuel + tips are 100% theirs
 
 const GAS_TYPES = [
     { id: 'regular',  name: 'Regular 87',  price: 3.29 },
@@ -22,26 +22,21 @@ const GAS_TYPES = [
     { id: 'diesel',   name: 'Diesel',      price: 3.99 },
 ];
 
-const TIRE_SIZES = [
-    { id: '195-65-15', price: 89.99 },  { id: '205-55-16', price: 109.99 },
-    { id: '225-60-17', price: 129.99 }, { id: '235-55-18', price: 149.99 },
-    { id: '245-45-19', price: 179.99 }, { id: '255-50-20', price: 199.99 },
-];
-
+// Uber-style fare: flat service fee covers the first includedMiles,
+// then perMile is added for every mile beyond that.
 const SERVICES = {
-    gas:     { icon: '⛽', name: 'Gas Delivery',  from: 25, badge: '24/7' },
-    jump:    { icon: '🔋', name: 'Jump Start',    from: 30, badge: '24/7' },
-    tire:    { icon: '🛞', name: 'Tire Service',  from: 25, badge: 'tire-hours' },
-    lockout: { icon: '🔑', name: 'Lockout Help',  from: 35, badge: '24/7' },
-    tow:     { icon: '🪝', name: 'Towing',        from: 75, badge: '24/7' },
-    ev:      { icon: '⚡', name: 'EV Boost',      from: 45, badge: 'NEW' },
+    gas:  { icon: '⛽', name: 'Gas Delivery', from: 35, badge: '24/7', baseFee: 35, includedMiles: 5, perMile: 2 },
+    jump: { icon: '🔋', name: 'Jump Start',   from: 40, badge: '24/7', baseFee: 40, includedMiles: 5, perMile: 2 },
 };
 
-const PROMOS = {
-    WELCOME10: { type: 'pct',  value: 0.10, label: '10% off' },
-    SAVE5:     { type: 'flat', value: 5,    label: '$5 off' },
-    DASH20:    { type: 'pct',  value: 0.20, label: '20% off' },
-};
+function serviceFee(svcKey, miles) {
+    const s = SERVICES[svcKey];
+    const extra = Math.max(0, Math.ceil(miles - s.includedMiles));
+    return { fee: s.baseFee + extra * s.perMile, extraMiles: extra };
+}
+
+const driverCut = (fee) => Math.round(fee * DRIVER_SHARE * 100) / 100;
+const newPin = () => String(Math.floor(1000 + Math.random() * 9000));
 
 const DRIVER_NAMES = ['Marcus T.', 'Sarah K.', 'Devon R.', 'Alicia M.', 'James P.', 'Rosa G.', 'Tyler B.', 'Nina V.'];
 const DRIVER_CARS = ['Black Ford F-150', 'White Chevy Silverado', 'Silver Toyota Tacoma', 'Red RAM 1500', 'Blue Honda Ridgeline', 'Gray GMC Sierra'];
@@ -291,22 +286,15 @@ function refreshActiveBanner() {
     if (active) $('banner-active-sub').textContent = `${SERVICES[active.service].icon} ${SERVICES[active.service].name} · ${active.statusLabel || 'in progress'}`;
 }
 
-function tireOpen() {
-    const now = new Date();
-    return now.getHours() * 60 + now.getMinutes() < TIRE_CLOSE.h * 60 + TIRE_CLOSE.m;
-}
-
 function renderServiceGrid() {
     const grid = $('service-grid');
     grid.innerHTML = '';
     Object.entries(SERVICES).forEach(([key, s]) => {
-        const closed = key === 'tire' && !tireOpen();
-        const badge = key === 'tire' ? (closed ? 'Closed' : 'Til 10:30p') : s.badge;
         const btn = document.createElement('button');
-        btn.className = `service-card${closed ? ' disabled' : ''}`;
-        btn.innerHTML = `<span class="s-badge${closed ? ' closed' : ''}">${badge}</span>
+        btn.className = 'service-card';
+        btn.innerHTML = `<span class="s-badge">${s.badge}</span>
             <span class="s-icon">${s.icon}</span><span class="s-name">${s.name}</span>
-            <span class="s-price">From $${s.from}</span>`;
+            <span class="s-price">From $${s.from} · first ${s.includedMiles} mi included</span>`;
         btn.addEventListener('click', () => openOrderBuilder(key));
         grid.appendChild(btn);
     });
@@ -317,7 +305,6 @@ function wireCustomer() {
     $('home-assistant').addEventListener('click', openAssistant);
     $('banner-upgrade').addEventListener('click', () => show('premium'));
     $('banner-track').addEventListener('click', () => active && show('track'));
-    setInterval(() => { if ($('screen-home').classList.contains('active')) renderServiceGrid(); }, 60000);
 }
 
 /* ── Order builder ──────────────────────────────────────── */
@@ -327,16 +314,12 @@ function openOrderBuilder(service) {
     draft = {
         service,
         gasType: 'regular', gallons: 5,
-        tireSize: TIRE_SIZES[1].id, tireCount: 1,
-        towMiles: 5,
-        notes: '', promo: null,
+        driverDistance: Math.round(rand(1.5, 12) * 10) / 10, // nearest driver, miles (simulated)
+        notes: '',
     };
     const s = SERVICES[service];
     $('order-title').textContent = `${s.icon} ${s.name}`;
     $('order-notes').value = '';
-    $('promo-input').value = '';
-    $('promo-msg').textContent = '';
-    $('promo-msg').className = 'promo-msg';
     renderOrderOptions();
     recalc();
     show('order');
@@ -345,77 +328,57 @@ function openOrderBuilder(service) {
 function renderOrderOptions() {
     const host = $('order-options');
     const d = draft;
-    let html = '';
+    const s = SERVICES[d.service];
+    const distNote = `<div class="loc-row"><div class="loc-dot"></div>
+        <div class="loc-text"><b>Nearest driver: ${d.driverDistance.toFixed(1)} mi away</b>
+        <span>First ${s.includedMiles} miles included · $${s.perMile}/mi after that</span></div></div>`;
+
     if (d.service === 'gas') {
-        html = `<div class="card"><div class="opt-group"><span class="opt-label">Fuel type</span>
+        host.innerHTML = `<div class="card"><div class="opt-group"><span class="opt-label">Fuel type</span>
             <div class="opt-pills">${GAS_TYPES.map((g) => `<button class="opt-pill${d.gasType === g.id ? ' active' : ''}" data-gas="${g.id}">${g.name} · $${g.price}</button>`).join('')}</div></div>
-            <div class="opt-group"><span class="opt-label">Gallons</span>
-            <div class="stepper"><button data-step="-1">−</button><b id="gal-count">${d.gallons} gal</b><button data-step="1">+</button></div></div></div>`;
-    } else if (d.service === 'tire') {
-        html = `<div class="card"><div class="opt-group"><span class="opt-label">Tire size</span>
-            <div class="opt-pills">${TIRE_SIZES.map((t) => `<button class="opt-pill${d.tireSize === t.id ? ' active' : ''}" data-tire="${t.id}">${t.id.replaceAll('-', '/')} · $${t.price}</button>`).join('')}</div></div>
-            <div class="opt-group"><span class="opt-label">How many</span>
-            <div class="stepper"><button data-step="-1">−</button><b id="gal-count">${d.tireCount} tire${d.tireCount > 1 ? 's' : ''}</b><button data-step="1">+</button></div></div></div>`;
-    } else if (d.service === 'tow') {
-        html = `<div class="card"><div class="opt-group"><span class="opt-label">Tow distance</span>
-            <div class="stepper"><button data-step="-1">−</button><b id="gal-count">${d.towMiles} mi</b><button data-step="1">+</button></div>
-            <p class="fineprint">$75 hookup + $3/mile</p></div></div>`;
+            <div class="opt-group"><span class="opt-label">How many gallons</span>
+            <div class="stepper"><button data-step="-1">−</button><b>${d.gallons} gal</b><button data-step="1">+</button></div>
+            <p class="fineprint">You pay for the fuel here in the app — your driver buys it fresh at the pump and brings it straight to you.</p></div>
+            ${distNote}</div>`;
     } else {
-        const blurb = {
-            jump: 'A driver with a professional jump kit will get your battery going — usually under 5 minutes on site.',
-            lockout: 'Certified driver unlocks your car with damage-free tools. Have your ID ready.',
-            ev: 'Mobile DC boost adds ~20 miles of range so you can reach a charger.',
-        }[d.service];
-        html = `<div class="card"><p class="muted">${blurb}</p></div>`;
+        host.innerHTML = `<div class="card">
+            <p class="muted">A driver with a professional jump kit will get your battery going — usually under 5 minutes on site.</p>
+            ${distNote}</div>`;
     }
-    host.innerHTML = html;
 
     host.querySelectorAll('[data-gas]').forEach((b) => b.addEventListener('click', () => { draft.gasType = b.dataset.gas; renderOrderOptions(); recalc(); }));
-    host.querySelectorAll('[data-tire]').forEach((b) => b.addEventListener('click', () => { draft.tireSize = b.dataset.tire; renderOrderOptions(); recalc(); }));
     host.querySelectorAll('[data-step]').forEach((b) => b.addEventListener('click', () => {
-        const dir = +b.dataset.step;
-        if (draft.service === 'gas') draft.gallons = Math.min(20, Math.max(1, draft.gallons + dir));
-        if (draft.service === 'tire') draft.tireCount = Math.min(4, Math.max(1, draft.tireCount + dir));
-        if (draft.service === 'tow') draft.towMiles = Math.min(50, Math.max(1, draft.towMiles + dir * 5));
+        draft.gallons = Math.min(20, Math.max(1, draft.gallons + Number(b.dataset.step)));
         renderOrderOptions(); recalc();
     }));
 }
 
 function priceDraft() {
     const d = draft;
-    const rows = [];
-    let subtotal = 0;
-    const add = (label, amt) => { rows.push({ label, amt }); subtotal += amt; };
+    const s = SERVICES[d.service];
+    const { fee, extraMiles } = serviceFee(d.service, d.driverDistance);
+    const rows = [{ label: `Service fee (first ${s.includedMiles} mi included)`, amt: s.baseFee }];
+    if (extraMiles > 0) rows.push({ label: `Distance · +${extraMiles} mi × $${s.perMile}`, amt: extraMiles * s.perMile });
 
+    let fuel = 0;
     if (d.service === 'gas') {
         const g = GAS_TYPES.find((x) => x.id === d.gasType);
-        add('Delivery fee', 25);
-        add(`${g.name} × ${d.gallons} gal`, g.price * d.gallons);
-    } else if (d.service === 'jump') {
-        add('Jump start service', 30);
-    } else if (d.service === 'tire') {
-        const t = TIRE_SIZES.find((x) => x.id === d.tireSize);
-        add('Delivery & install', 25);
-        add(`Tire ${t.id.replaceAll('-', '/')} × ${d.tireCount}`, t.price * d.tireCount);
-    } else if (d.service === 'lockout') {
-        add('Lockout service', 35);
-    } else if (d.service === 'tow') {
-        add('Hookup fee', 75);
-        add(`Distance × ${d.towMiles} mi`, 3 * d.towMiles);
-    } else if (d.service === 'ev') {
-        add('Mobile EV boost', 45);
+        fuel = Math.round(g.price * d.gallons * 100) / 100;
+        rows.push({ label: `${g.name} × ${d.gallons} gal (pump price)`, amt: fuel });
     }
 
+    // Premium discount applies to the service fee only — never the fuel,
+    // and never the driver's cut (drivers are paid on the full fee).
     let discount = 0;
     const notes = [];
-    if (user.premium) { discount += subtotal * PREMIUM_RATE; notes.push('⭐ Premium −15%'); }
-    if (d.promo) {
-        const p = PROMOS[d.promo];
-        discount += p.type === 'pct' ? subtotal * p.value : p.value;
-        notes.push(`🏷️ ${d.promo} (${p.label})`);
-    }
-    discount = Math.min(discount, subtotal);
-    return { rows, subtotal, discount, notes, total: Math.max(0, subtotal - discount) };
+    if (user.premium) { discount = Math.round(fee * PREMIUM_RATE * 100) / 100; notes.push('⭐ Premium −15% service fee'); }
+
+    return {
+        rows, fee, fuel, discount, notes,
+        subtotal: fee + fuel,
+        total: Math.max(0, fee + fuel - discount),
+        driverEarns: driverCut(fee) + fuel, // what the driver takes home (before tip)
+    };
 }
 
 function recalc() {
@@ -427,7 +390,7 @@ function recalc() {
     $('order-submit-price').textContent = money(p.total);
     const nudge = $('premium-nudge');
     nudge.hidden = user.premium;
-    if (!user.premium) $('premium-nudge-amt').textContent = money(p.subtotal * PREMIUM_RATE);
+    if (!user.premium) $('premium-nudge-amt').textContent = money(p.fee * PREMIUM_RATE);
 }
 
 function wireOrderBuilder() {
@@ -439,22 +402,6 @@ function wireOrderBuilder() {
     $('order-loc-refresh').addEventListener('click', () => {
         $('order-loc-sub').textContent = 'Refreshing GPS…';
         locate(() => { $('order-loc-sub').textContent = 'GPS locked · within service area'; toast('Location updated', 'ok'); });
-    });
-
-    $('promo-apply').addEventListener('click', () => {
-        const code = $('promo-input').value.trim().toUpperCase();
-        const msg = $('promo-msg');
-        if (PROMOS[code]) {
-            draft.promo = code;
-            msg.textContent = `✓ ${code} applied — ${PROMOS[code].label}`;
-            msg.className = 'promo-msg ok';
-            toast(`Promo ${code} applied 🎉`, 'ok');
-        } else {
-            draft.promo = null;
-            msg.textContent = 'That code isn\'t valid';
-            msg.className = 'promo-msg bad';
-        }
-        recalc();
     });
 
     $('order-submit').addEventListener('click', () => {
@@ -497,12 +444,13 @@ function placeOrder(pricing) {
         service: d.service,
         pricing,
         notes: d.notes,
+        pin: newPin(),
         placedAt: Date.now(),
         step: 0,
         statusLabel: STATUS_LABELS[0],
         driver: null,
     };
-    toast('Order placed! Finding your driver…', 'ok');
+    toast('Payment secured — finding your driver…', 'ok');
     startTracking();
 }
 
@@ -514,6 +462,8 @@ function startTracking() {
     $('track-summary').innerHTML = `<b>${SERVICES[active.service].icon} ${SERVICES[active.service].name}</b>
         <span class="muted">Order ${active.id} · ${money(active.pricing.total)}${active.notes ? ` · “${esc(active.notes)}”` : ''}</span>`;
     $('track-cancel').hidden = false;
+    $('track-pin-card').hidden = true;
+    $('track-confirm').hidden = true;
 
     if (!maps.track) {
         maps.track = makeMap('map-track');
@@ -584,16 +534,22 @@ function driverArrived() {
     if (!active) return;
     setStep(3);
     $('track-eta').textContent = 'here now';
-    toast(`${active.driver.name} has arrived 📍`, 'ok');
+    // show the verification code + let the customer close out the job
+    $('track-pin').textContent = active.pin;
+    $('track-pin-card').hidden = false;
+    $('track-cancel').hidden = true;
+    $('track-confirm').hidden = false;
+    toast(`${active.driver.name} has arrived — give them your code 🔐`, 'ok');
     if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
-    later(() => completeOrder(), rand(6000, 9000));
 }
 
 function completeOrder() {
     if (!active) return;
     setStep(4);
-    $('track-cancel').hidden = true;
-    toast('Service complete! ✅', 'ok');
+    $('track-confirm').hidden = true;
+    $('track-pin-card').hidden = true;
+    const payout = driverCut(active.pricing.fee) + active.pricing.fuel;
+    toast(`Job complete ✅ ${active.driver.name} was paid ${money(payout)} instantly`, 'ok');
     later(() => openRating(), 900);
 }
 
@@ -621,6 +577,7 @@ function wireTracking() {
         toast('Order cancelled — no charge', 'ok');
         show('home');
     });
+    $('track-confirm').addEventListener('click', () => completeOrder());
     $('track-help').addEventListener('click', openAssistant);
     $('track-call').addEventListener('click', () => toast('📞 Calling driver… (demo)'));
     $('track-msg').addEventListener('click', () => { openAssistant(); assistantSay(`I've let ${active?.driver?.name || 'your driver'} know you messaged — they'll reply through the app. Anything else I can help with?`); });
@@ -882,6 +839,11 @@ function wireDriver() {
     });
 
     $('job-action').addEventListener('click', advanceJob);
+
+    // PIN verification modal
+    $('pin-confirm').addEventListener('click', verifyJobPin);
+    $('pin-cancel').addEventListener('click', closeModals);
+    $('pin-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') verifyJobPin(); });
 }
 
 function stopDriverSim() {
@@ -908,18 +870,28 @@ let pendingReq = null, reqInterval = null;
 function showIncomingRequest() {
     const svcKey = pick(Object.keys(SERVICES));
     const s = SERVICES[svcKey];
+    const distance = rand(1, 11);
+    const { fee } = serviceFee(svcKey, distance);
+    let fuel = 0, fuelLabel = '';
+    if (svcKey === 'gas') {
+        const g = pick(GAS_TYPES);
+        const gallons = Math.floor(rand(2, 13));
+        fuel = Math.round(g.price * gallons * 100) / 100;
+        fuelLabel = ` (+${money(fuel)} fuel reimbursed)`;
+    }
     pendingReq = {
         service: svcKey,
         customer: pick(CUSTOMER_NAMES),
         address: `${Math.floor(rand(100, 9900))} ${pick(STREETS)}`,
-        distance: rand(0.8, 6.5),
-        payout: rand(22, 52),
+        distance,
+        fee, fuel,
+        payout: driverCut(fee) + fuel,
         notes: Math.random() < 0.5 ? pick(['Silver sedan on the shoulder', 'In the Walmart parking lot', 'Hazards are on', 'Near the gas station entrance']) : '',
     };
     $('req-service').textContent = `${s.icon} ${s.name} request`;
     $('req-customer').textContent = pendingReq.customer;
     $('req-distance').textContent = `${pendingReq.distance.toFixed(1)} mi away`;
-    $('req-payout').textContent = money(pendingReq.payout);
+    $('req-payout').textContent = `${money(driverCut(fee))}${fuelLabel}`;
     openModal('modal-request');
     if (navigator.vibrate) navigator.vibrate([100, 60, 100]);
 
@@ -944,7 +916,7 @@ function stopReqCountdown() { clearInterval(reqInterval); reqInterval = null; }
 function acceptRequest() {
     stopReqCountdown();
     closeModals();
-    job = { ...pendingReq, stage: 0 };
+    job = { ...pendingReq, stage: 0, pin: newPin() };
     pendingReq = null;
     $('driver-idle').hidden = true;
     $('driver-job').hidden = false;
@@ -954,47 +926,77 @@ function acceptRequest() {
     $('job-customer').textContent = job.customer;
     $('job-address').textContent = `${job.address} · ${job.distance.toFixed(1)} mi`;
     $('job-notes').textContent = job.notes ? `“${job.notes}”` : '';
-    $('job-action').textContent = 'Navigate to customer';
+    $('job-action').textContent = job.service === 'gas' ? 'Pick up fuel & navigate' : 'Navigate to customer';
     toast(`Job accepted — head to ${job.address} 🚗`, 'ok');
 
     // drop a customer pin on the driver map
     const ang = Math.random() * Math.PI * 2;
     const d = 0.012 * job.distance / 2;
-    job.pin = addMarker(maps.driver, [myLoc.lat + Math.sin(ang) * d, myLoc.lng + Math.cos(ang) * d], meIcon);
-    if (maps.driver && hasMaps()) maps.driver.fitBounds(L.latLngBounds([myLoc.lat, myLoc.lng], job.pin.getLatLng()), { padding: [40, 40] });
+    job.mapPin = addMarker(maps.driver, [myLoc.lat + Math.sin(ang) * d, myLoc.lng + Math.cos(ang) * d], meIcon);
+    if (maps.driver && hasMaps()) maps.driver.fitBounds(L.latLngBounds([myLoc.lat, myLoc.lng], job.mapPin.getLatLng()), { padding: [40, 40] });
 }
 
 function advanceJob() {
     if (!job) return;
-    job.stage++;
-    if (job.stage === 1) {
+    if (job.stage === 0) {
+        job.stage = 1;
         $('job-action').textContent = 'I\'ve arrived';
         toast('Navigation started (demo) 🧭');
-    } else if (job.stage === 2) {
-        $('job-action').textContent = `Complete job · collect ${money(job.payout)}`;
+    } else if (job.stage === 1) {
+        job.stage = 2;
+        $('job-action').textContent = '🔐 Enter customer\'s code';
         toast('Customer notified you\'ve arrived 📍', 'ok');
+        // in the real app the customer reads their code off their screen
+        const j = job;
+        setTimeout(() => { if (job === j) toast(`${j.customer}: "My code is ${j.pin}"`, 'ok'); }, 1500);
+    } else if (job.stage === 2) {
+        $('pin-input').value = '';
+        $('pin-error').textContent = '';
+        openModal('modal-pin');
+        setTimeout(() => $('pin-input').focus(), 150);
     } else {
-        // complete
-        const tip = Math.random() < 0.65 ? pick([2, 3, 5, 5, 10]) : 0;
-        const total = job.payout + tip;
-        const rating = pick([5, 5, 5, 5, 4]);
-        user.payouts.unshift({ service: job.service, amount: total, tip, at: Date.now(), customer: job.customer });
-        user.stats.earned += total;
-        user.stats.trips++;
-        user.stats.tips += tip;
-        user.stats.ratingSum += rating;
-        user.stats.ratingCount++;
-        user.week[new Date().getDay()] += total;
-        save();
-        if (job.pin) job.pin.remove();
-        job = null;
-        $('driver-job').hidden = true;
-        $('driver-idle').hidden = false;
-        renderDriverStats();
-        toast(tip > 0 ? `+${money(total)} earned (incl. ${money(tip)} tip) 💰` : `+${money(total)} earned 💰`, 'ok');
-        if (navigator.vibrate) navigator.vibrate([60, 30, 60]);
-        if (driverState.online) queueRequest(rand(7000, 14000));
+        finishJob();
     }
+}
+
+function verifyJobPin() {
+    if ($('pin-input').value.trim() !== job.pin) {
+        $('pin-error').textContent = 'Wrong code — ask the customer again';
+        if (navigator.vibrate) navigator.vibrate(120);
+        return;
+    }
+    closeModals();
+    job.stage = 3;
+    $('job-action').textContent = `Complete job · collect ${money(job.payout)}`;
+    toast('Customer verified ✓ — do your thing', 'ok');
+}
+
+function finishJob() {
+    const tip = Math.random() < 0.65 ? pick([2, 3, 5, 5, 10]) : 0;
+    const serviceCut = driverCut(job.fee);
+    const fuel = job.fuel;
+    const total = job.payout + tip;
+    const rating = pick([5, 5, 5, 5, 4]);
+    user.payouts.unshift({ service: job.service, amount: total, tip, at: Date.now(), customer: job.customer });
+    user.stats.earned += total;
+    user.stats.trips++;
+    user.stats.tips += tip;
+    user.stats.ratingSum += rating;
+    user.stats.ratingCount++;
+    user.week[new Date().getDay()] += total;
+    save();
+    if (job.mapPin) job.mapPin.remove();
+    job = null;
+    $('driver-job').hidden = true;
+    $('driver-idle').hidden = false;
+    renderDriverStats();
+    toast(`💰 Paid instantly: +${money(total)}`, 'ok');
+    const breakdown = `${money(serviceCut)} fare` +
+        (fuel > 0 ? ` + ${money(fuel)} fuel reimbursed` : '') +
+        (tip > 0 ? ` + ${money(tip)} tip` : '');
+    setTimeout(() => toast(`Breakdown: ${breakdown}`, 'ok'), 1200);
+    if (navigator.vibrate) navigator.vibrate([60, 30, 60]);
+    if (driverState.online) queueRequest(rand(7000, 14000));
 }
 
 /* ── Earnings screen ────────────────────────────────────── */
@@ -1062,27 +1064,29 @@ function wireTabs() {
 
 /* ── Dash Assistant ─────────────────────────────────────── */
 
-const ASSISTANT_CHIPS = ['Where\'s my driver?', 'How does pricing work?', 'Become a driver', 'Is Premium worth it?', 'Promo codes?'];
+const ASSISTANT_CHIPS = ['Where\'s my driver?', 'How does pricing work?', 'What\'s the code for?', 'How do drivers get paid?', 'Is Premium worth it?'];
 
 const ASSISTANT_BRAIN = [
     { match: /where.*(driver|order)|track|eta|how long/i, reply: () => active
-        ? `Your ${SERVICES[active.service].name.toLowerCase()} order is ${active.statusLabel.toLowerCase()} ${active.driver ? `— ${active.driver.name} is driving a ${active.driver.car}.` : ''} Tap the Track banner on Home to watch them live.`
-        : 'You don\'t have an active order right now. Tap any service on the Home screen and help will be on the way in minutes!' },
-    { match: /price|pricing|cost|how much|fee/i, reply: () =>
-        'Here\'s our pricing:\n⛽ Gas — $25 delivery + fuel at pump price\n🔋 Jump start — $30 flat\n🛞 Tires — $25 install + tire cost\n🔑 Lockout — $35\n🪝 Tow — $75 + $3/mi\n⚡ EV boost — $45\n\n⭐ Premium members save 15% on everything.' },
-    { match: /driver|earn|drive|job|money/i, reply: () =>
-        user.driverApproved ? 'You\'re already an approved driver! Switch to driver mode from your Account tab, flip yourself Online, and requests will start rolling in. You keep 100% of tips. 💰'
-        : 'Drivers earn $25–$50 per rescue plus 100% of tips, paid instantly. There\'s a one-time $8.99 registration (background check + verification). Tap "Drive & Earn" on the role screen to apply — approval takes about a minute in this demo.' },
+        ? `Your ${SERVICES[active.service].name.toLowerCase()} order is ${active.statusLabel.toLowerCase()} ${active.driver ? `— ${active.driver.name} is driving a ${active.driver.car}.` : ''} Tap the Track banner on Home to watch them come to you live on the map.`
+        : 'You don\'t have an active order right now. Tap Gas Delivery or Jump Start on the Home screen and help will be on the way in minutes!' },
+    { match: /price|pricing|cost|how much|fee|mile|distance/i, reply: () =>
+        'Simple, Uber-style pricing:\n\n⛽ Gas delivery — $35 service fee (first 5 miles included) + $2/mile after, plus your fuel at pump price. You pick the gallons, we bring the gas.\n🔋 Jump start — $40 service fee (first 5 miles included) + $2/mile after.\n\nThe further away you are, the fare adjusts automatically — you see the exact total before you pay. ⭐ Premium members get 15% off the service fee.' },
+    { match: /code|pin|verify|prove/i, reply: () =>
+        'Safety first 🔐 — every order gets a 4-digit code. When your driver arrives, it appears on your tracking screen. Say it to the driver; they can\'t start (or get paid for) the job without it. That way you know it\'s your driver, and they know it\'s you.' },
+    { match: /paid|payout|payment.*(driver)|driver.*(paid|pay|earn|money|cut)|how do drivers/i, reply: () =>
+        'Drivers keep 70% of every service fee, get fuel costs reimbursed 100% on gas runs, and keep 100% of tips. The money hits their balance the instant the customer confirms the job is complete — no waiting for a weekly deposit. 💸' },
+    { match: /driver|earn|drive|job|money|sign.?up/i, reply: () =>
+        user.driverApproved ? 'You\'re already an approved driver! Switch to driver mode from your Account tab, flip yourself Online, and requests will start rolling in. 70% of every fare + 100% of tips, paid instantly. 💰'
+        : 'Drivers keep 70% of every fare ($24.50–$28+ per rescue), 100% of tips, and fuel is reimbursed on gas runs — all paid instantly when the job completes. One-time $8.99 registration covers your background check. Tap "Drive & Earn" on the role screen to apply.' },
     { match: /premium|member|subscri|worth/i, reply: () =>
-        user.premium ? 'You\'re Premium already ⭐ — 15% comes off every order automatically. It\'s working right now.'
-        : 'Premium is $9.99/mo for 15% off every order + priority matching and free cancellations. If you order more than twice a month, it pays for itself. Try it from the Account tab.' },
-    { match: /promo|code|discount|coupon/i, reply: () =>
-        'Psst — try these codes at checkout:\n🏷️ WELCOME10 — 10% off\n🏷️ SAVE5 — $5 off\n🏷️ DASH20 — 20% off (limited!)' },
+        user.premium ? 'You\'re Premium already ⭐ — 15% comes off every service fee automatically. It\'s working right now.'
+        : 'Premium is $9.99/mo for 15% off every service fee + priority matching and free cancellations. Order twice a month and it pays for itself. Try it from the Account tab.' },
     { match: /cancel/i, reply: () => 'You can cancel free any time before your driver arrives — the Cancel button is at the bottom of the tracking screen. After arrival, cancellation isn\'t available.' },
-    { match: /tire|hour|open|close/i, reply: () => `Tire service runs until 10:30 PM (currently ${tireOpen() ? 'OPEN ✅' : 'CLOSED ❌'}). Gas, jump starts, lockouts, tows and EV boosts are 24/7.` },
-    { match: /hi|hello|hey|yo\b/i, reply: () => `Hey ${user?.name.split(' ')[0] || 'there'}! 👋 I can help with orders, pricing, driving, Premium, or promo codes. What do you need?` },
+    { match: /hour|open|close|24/i, reply: () => 'We\'re 24/7 — gas delivery and jump starts, day or night. 🌙' },
+    { match: /hi|hello|hey|yo\b/i, reply: () => `Hey ${user?.name.split(' ')[0] || 'there'}! 👋 I can help with orders, pricing, the verification code, driving, or Premium. What do you need?` },
     { match: /thank|thanks|ty\b/i, reply: () => 'Anytime! Stay safe out there. 🧡' },
-    { match: /real|demo|charge|payment/i, reply: () => 'This is a demo — no real payments are processed and all data lives only on your device. Explore freely!' },
+    { match: /real|demo|charge/i, reply: () => 'This is a demo — no real payments are processed and all data lives only on your device. Explore freely!' },
 ];
 
 function wireAssistant() {
@@ -1129,7 +1133,7 @@ function sendAssistant() {
     $('assistant-msgs').appendChild(m);
     scrollAssistant();
     const hit = ASSISTANT_BRAIN.find((b) => b.match.test(text));
-    assistantSay(hit ? hit.reply() : 'Good question! I\'m best with orders, pricing, driving, Premium and promo codes. For anything else, our human team is at support@gasdash.app (demo). 😄');
+    assistantSay(hit ? hit.reply() : 'Good question! I\'m best with orders, pricing, the verification code, driving and Premium. For anything else, our human team is at support@gasdash.app (demo). 😄');
 }
 
 function scrollAssistant() {

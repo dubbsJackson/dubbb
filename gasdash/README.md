@@ -1,40 +1,35 @@
-# ⚡ GasDash 2.0 — Roadside Assistance On-Demand
+# ⚡ GasDash — Gas Delivery & Jump Starts, On-Demand
 
-One app, two modes: **get rescued** or **be the rescuer**.
+Uber-style roadside rescue. One app, two modes: **get help** or **drive & earn**.
 
-Complete rebuild of the original GasDash demo — every flow is now fully functional
-end-to-end, no backend required (all data persists locally on the device).
+## The model
 
-## What's inside
+| | Customer pays | Driver receives | Platform keeps |
+|---|---|---|---|
+| ⛽ **Gas delivery** | $35 service fee (first 5 mi included) + $2/mi after + fuel at pump price | 70% of service fee + **100% fuel reimbursed** + 100% tips | 30% of service fee |
+| 🔋 **Jump start** | $40 service fee (first 5 mi included) + $2/mi after | 70% of service fee + 100% tips | 30% of service fee |
 
-**Customer mode**
-- 6 services: ⛽ Gas delivery · 🔋 Jump start · 🛞 Tire service · 🔑 Lockout · 🪝 Towing · ⚡ EV boost
-- Full order builder — fuel type/gallons, tire size/count, tow distance, driver notes
-- Real price breakdown with Premium (15%) and promo-code discounts (`WELCOME10`, `SAVE5`, `DASH20`)
-- Live tracking: animated driver on a dark-themed map, status timeline, ETA countdown
-- Rate your driver + tip (drivers keep 100%)
-- Order history with tap-to-open receipts
-- ⭐ Premium membership ($9.99/mo, 15% off everything) with subscribe/cancel
-
-**Driver mode**
-- $8.99 registration + 3-step application (auto-approved in demo)
-- Go online → incoming request cards with 15-second accept countdown
-- Full job flow: accept → navigate → arrive → complete → instant payout
-- Earnings dashboard: today's total, weekly bar chart, tips, payout history, rating
-
-**Platform**
-- 🤖 Dash Assistant — built-in help chat that knows your live order state
-- 📲 Installable PWA (manifest + offline service worker)
-- One-tap demo mode — no signup needed to try everything
-- Mobile-first dark UI; on desktop it renders in a phone frame
+- Customer pays **in the app up front** — picks fuel type & gallons, sees the exact
+  fare (distance included) before confirming.
+- **Live map tracking** — watch your driver come to you, Uber-style.
+- **4-digit verification code** — shown to the customer when the driver arrives;
+  the driver must enter it to start the job. Proves both sides are legit.
+- **Customer confirms completion** — a "job complete" button closes the order.
+- **Drivers are paid instantly** the moment the job completes, with a
+  fare + fuel + tip breakdown. Tip prompt appears after every order (like Uber);
+  drivers keep every cent.
+- ⭐ Premium ($9.99/mo): 15% off service fees. The discount never touches the
+  driver's cut — drivers are paid on the full fare.
+- 🤖 Dash Assistant — in-app help chat that knows your live order state.
+- 📲 Installable PWA with offline app shell.
 
 ## Run it
 
-It's fully static — open `index.html`, or serve the folder:
+Fully static — open `index.html`, or serve the folder:
 
 ```bash
 npx serve gasdash
 ```
 
-> Demo app: authentication and payments are simulated, data stays in
+> Demo app: payments and driver matching are simulated, data stays in
 > `localStorage` on your device. No real charges ever occur.
