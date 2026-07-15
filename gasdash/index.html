@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>GasDash — Roadside Assistance On-Demand</title>
+    <meta name="description" content="GasDash delivers fuel, jump starts, tire service, lockout help and more — straight to your car, 24/7. Or drive with GasDash and earn on your schedule.">
+    <meta name="theme-color" content="#0B0B0F">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icon.svg">
+    <meta property="og:title" content="GasDash — Roadside Assistance On-Demand">
+    <meta property="og:description" content="Out of gas? Dead battery? Flat tire? Help arrives in minutes. One app, two modes: get help or drive & earn.">
+    <meta property="og:type" content="website">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="vendor/leaflet.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- ═══════════ SPLASH ═══════════ -->
+    <div id="splash-screen" class="splash-screen">
+        <div class="splash-content">
+            <div class="splash-logo">
+                <svg viewBox="0 0 64 64" class="bolt-logo"><path d="M36 4 12 36h14l-4 24 26-34H32l4-22z" fill="url(#boltGrad)"/><defs><linearGradient id="boltGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF4D6D"/><stop offset="1" stop-color="#DC143C"/></linearGradient></defs></svg>
+            </div>
+            <h1 class="logo-text">Gas<span>Dash</span></h1>
+            <p class="tagline">Roadside rescue in minutes</p>
+            <div class="splash-bar"><div class="splash-bar-fill"></div></div>
+        </div>
+    </div>
+
+    <div id="app" class="app" hidden>
+
+        <!-- ═══════════ AUTH ═══════════ -->
+        <section id="screen-auth" class="screen">
+            <div class="auth-hero">
+                <svg viewBox="0 0 64 64" class="bolt-logo sm"><path d="M36 4 12 36h14l-4 24 26-34H32l4-22z" fill="#DC143C"/></svg>
+                <h1 class="logo-text">Gas<span>Dash</span></h1>
+                <p class="auth-sub">Get rescued — or be the rescuer.</p>
+                <div class="hero-badges">
+                    <span class="hero-badge">⛽ Fuel</span><span class="hero-badge">🔋 Jump</span><span class="hero-badge">🛞 Tires</span><span class="hero-badge">🔑 Lockout</span><span class="hero-badge">🪝 Tow</span><span class="hero-badge">⚡ EV</span>
+                </div>
+            </div>
+            <div class="auth-card">
+                <div class="seg-tabs" role="tablist">
+                    <button class="seg-tab active" data-authtab="login">Log in</button>
+                    <button class="seg-tab" data-authtab="signup">Create account</button>
+                </div>
+                <form id="login-form" class="auth-form active" novalidate>
+                    <label class="field"><span>Email</span><input type="email" id="login-email" autocomplete="email" placeholder="you@example.com" required></label>
+                    <label class="field"><span>Password</span><input type="password" id="login-password" autocomplete="current-password" placeholder="••••••••" required></label>
+                    <button type="submit" class="btn btn-primary btn-block">Log in</button>
+                    <button type="button" class="btn btn-ghost btn-block" id="demo-btn">✨ Try the demo (no account)</button>
+                </form>
+                <form id="signup-form" class="auth-form" novalidate>
+                    <label class="field"><span>Full name</span><input type="text" id="signup-name" autocomplete="name" placeholder="Alex Driver" required></label>
+                    <label class="field"><span>Email</span><input type="email" id="signup-email" autocomplete="email" placeholder="you@example.com" required></label>
+                    <label class="field"><span>Phone</span><input type="tel" id="signup-phone" autocomplete="tel" placeholder="(479) 555-0100" required></label>
+                    <label class="field"><span>Password</span><input type="password" id="signup-password" autocomplete="new-password" placeholder="8+ characters" minlength="8" required></label>
+                    <button type="submit" class="btn btn-primary btn-block">Create account</button>
+                    <p class="fineprint">Demo app — data stays on this device. No real charges ever occur.</p>
+                </form>
+            </div>
+        </section>
+
+        <!-- ═══════════ ROLE HUB ═══════════ -->
+        <section id="screen-role" class="screen">
+            <div class="role-wrap">
+                <p class="hello" id="role-hello">Welcome back</p>
+                <h2 class="role-title">What are you up to today?</h2>
+                <div class="role-cards">
+                    <button class="role-card" id="role-customer">
+                        <div class="role-emoji">🆘</div>
+                        <h3>Get Help</h3>
+                        <p>Fuel, jump starts, tires & more delivered to your car</p>
+                        <span class="chip" id="chip-membership">Standard</span>
+                    </button>
+                    <button class="role-card" id="role-driver">
+                        <div class="role-emoji">🚗</div>
+                        <h3>Drive &amp; Earn</h3>
+                        <p>Rescue stranded drivers, get paid instantly</p>
+                        <span class="chip" id="chip-driver">Not a driver yet</span>
+                    </button>
+                </div>
+                <div class="role-stats">
+                    <div class="role-stat"><b id="stat-orders">0</b><span>orders</span></div>
+                    <div class="role-stat"><b id="stat-saved">$0</b><span>saved</span></div>
+                    <div class="role-stat"><b id="stat-earned">$0</b><span>earned</span></div>
+                </div>
+                <button class="btn btn-ghost" id="role-logout">Log out</button>
+            </div>
+        </section>
+
+        <!-- ═══════════ CUSTOMER HOME ═══════════ -->
+        <section id="screen-home" class="screen has-tabbar">
+            <header class="topbar">
+                <button class="iconbtn" id="home-menu" aria-label="Menu">☰</button>
+                <div class="topbar-title"><svg viewBox="0 0 64 64" class="bolt-logo xs"><path d="M36 4 12 36h14l-4 24 26-34H32l4-22z" fill="#DC143C"/></svg><b>Gas<span class="accent">Dash</span></b></div>
+                <button class="iconbtn" id="home-assistant" aria-label="Assistant">💬</button>
+            </header>
+            <div class="map-shell"><div id="map-home" class="map"></div>
+                <div class="map-pill" id="home-eta-pill">📍 Fastest driver: <b id="home-eta">8 min</b> away</div>
+            </div>
+            <div class="sheet">
+                <div id="banner-premium" class="banner-premium" hidden>
+                    <div><b>⭐ Go Premium</b><span>Save 15% on every single order</span></div>
+                    <button class="btn btn-gold btn-sm" id="banner-upgrade">Upgrade</button>
+                </div>
+                <div id="banner-active-order" class="banner-active" hidden>
+                    <div><b>🚗 Order in progress</b><span id="banner-active-sub">Your driver is on the way</span></div>
+                    <button class="btn btn-primary btn-sm" id="banner-track">Track</button>
+                </div>
+                <h2 class="sheet-title">What do you need?</h2>
+                <div class="service-grid" id="service-grid"></div>
+            </div>
+        </section>
+
+        <!-- ═══════════ ORDER BUILDER ═══════════ -->
+        <section id="screen-order" class="screen">
+            <header class="topbar">
+                <button class="iconbtn" data-nav="home" aria-label="Back">←</button>
+                <div class="topbar-title" id="order-title">Order</div>
+                <div class="iconbtn ghost"></div>
+            </header>
+            <div class="scroll-body">
+                <div id="order-options"></div>
+                <div class="card">
+                    <h3 class="card-title">📍 Your location</h3>
+                    <div class="loc-row">
+                        <div class="loc-dot"></div>
+                        <div class="loc-text"><b id="order-loc-label">Current location</b><span id="order-loc-sub">GPS locked · within service area</span></div>
+                        <button class="btn btn-ghost btn-sm" id="order-loc-refresh">↻</button>
+                    </div>
+                    <label class="field"><span>Notes for driver (optional)</span><input type="text" id="order-notes" placeholder="Silver Honda Civic, shoulder of I-540 North…" maxlength="120"></label>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">🏷️ Promo code</h3>
+                    <div class="promo-row">
+                        <input type="text" id="promo-input" placeholder="WELCOME10" autocapitalize="characters">
+                        <button class="btn btn-ghost btn-sm" id="promo-apply">Apply</button>
+                    </div>
+                    <p class="promo-msg" id="promo-msg"></p>
+                </div>
+                <div class="card price-card">
+                    <h3 class="card-title">Price breakdown</h3>
+                    <div id="price-rows"></div>
+                    <div class="price-total"><span>Total</span><b id="price-total">$0.00</b></div>
+                    <p class="fineprint" id="premium-nudge" hidden>⭐ Premium members would save <b id="premium-nudge-amt"></b> on this order</p>
+                </div>
+            </div>
+            <div class="cta-dock">
+                <button class="btn btn-primary btn-block btn-lg" id="order-submit">Request now · <span id="order-submit-price">$0.00</span></button>
+            </div>
+        </section>
+
+        <!-- ═══════════ TRACKING ═══════════ -->
+        <section id="screen-track" class="screen">
+            <header class="topbar">
+                <button class="iconbtn" data-nav="home" aria-label="Back">←</button>
+                <div class="topbar-title">Live tracking</div>
+                <button class="iconbtn" id="track-help" aria-label="Assistant">💬</button>
+            </header>
+            <div class="map-shell tall"><div id="map-track" class="map"></div>
+                <div class="map-pill" id="track-eta-pill">⏱️ ETA <b id="track-eta">—</b></div>
+            </div>
+            <div class="sheet">
+                <div class="status-strip" id="track-status-strip">
+                    <div class="status-step" data-step="0"><i></i><span>Finding driver</span></div>
+                    <div class="status-step" data-step="1"><i></i><span>Driver assigned</span></div>
+                    <div class="status-step" data-step="2"><i></i><span>En route</span></div>
+                    <div class="status-step" data-step="3"><i></i><span>Arrived</span></div>
+                    <div class="status-step" data-step="4"><i></i><span>Complete</span></div>
+                </div>
+                <div class="driver-card" id="track-driver-card" hidden>
+                    <div class="avatar" id="track-driver-avatar">M</div>
+                    <div class="driver-info">
+                        <b id="track-driver-name">—</b>
+                        <span id="track-driver-vehicle">—</span>
+                        <span class="stars" id="track-driver-rating">★ 4.9</span>
+                    </div>
+                    <div class="driver-actions">
+                        <button class="iconbtn round" id="track-call" aria-label="Call driver">📞</button>
+                        <button class="iconbtn round" id="track-msg" aria-label="Message driver">💬</button>
+                    </div>
+                </div>
+                <div class="card slim" id="track-summary"></div>
+                <button class="btn btn-danger-ghost btn-block" id="track-cancel">Cancel order</button>
+            </div>
+        </section>
+
+        <!-- ═══════════ ORDERS HISTORY ═══════════ -->
+        <section id="screen-orders" class="screen has-tabbar">
+            <header class="topbar"><div class="iconbtn ghost"></div><div class="topbar-title">Your orders</div><div class="iconbtn ghost"></div></header>
+            <div class="scroll-body" id="orders-list"></div>
+        </section>
+
+        <!-- ═══════════ ACCOUNT ═══════════ -->
+        <section id="screen-account" class="screen has-tabbar">
+            <header class="topbar"><div class="iconbtn ghost"></div><div class="topbar-title">Account</div><div class="iconbtn ghost"></div></header>
+            <div class="scroll-body">
+                <div class="profile-card">
+                    <div class="avatar lg" id="account-avatar">A</div>
+                    <div><b id="account-name">—</b><span id="account-email">—</span></div>
+                    <span class="chip" id="account-tier">Standard</span>
+                </div>
+                <div class="menu-list">
+                    <button class="menu-row" id="account-premium"><span>⭐ Premium membership</span><i>›</i></button>
+                    <button class="menu-row" id="account-switch"><span>🔁 Switch mode</span><i>›</i></button>
+                    <button class="menu-row" id="account-payment"><span>💳 Payment methods</span><i>›</i></button>
+                    <button class="menu-row" id="account-assistant"><span>🤖 Dash Assistant</span><i>›</i></button>
+                    <button class="menu-row" id="account-install"><span>📲 Install app</span><i>›</i></button>
+                    <button class="menu-row danger" id="account-logout"><span>🚪 Log out</span><i>›</i></button>
+                </div>
+                <p class="fineprint center">GasDash demo · v2.0 · Built with Claude</p>
+            </div>
+        </section>
+
+        <!-- ═══════════ PREMIUM ═══════════ -->
+        <section id="screen-premium" class="screen">
+            <header class="topbar">
+                <button class="iconbtn" data-nav="back" aria-label="Back">←</button>
+                <div class="topbar-title">GasDash Premium</div><div class="iconbtn ghost"></div>
+            </header>
+            <div class="scroll-body">
+                <div class="premium-hero">
+                    <div class="premium-star">⭐</div>
+                    <h2>Save 15% on<br>every order</h2>
+                    <p>Members save an average of <b>$94/year</b></p>
+                </div>
+                <div class="card gold-border">
+                    <div class="price-line"><b class="bigprice">$9.99</b><span>/month</span></div>
+                    <ul class="ticks">
+                        <li>15% off all services, always</li>
+                        <li>Priority driver matching</li>
+                        <li>Free cancellations</li>
+                        <li>24/7 priority support</li>
+                        <li>Cancel anytime</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">Your savings preview</h3>
+                    <div class="save-row"><span>⛽ Gas delivery ($38.16)</span><b class="accent-green">−$5.72</b></div>
+                    <div class="save-row"><span>🔋 Jump start ($30.00)</span><b class="accent-green">−$4.50</b></div>
+                    <div class="save-row"><span>🪝 Tow 10 mi ($105.00)</span><b class="accent-green">−$15.75</b></div>
+                </div>
+            </div>
+            <div class="cta-dock">
+                <button class="btn btn-gold btn-block btn-lg" id="premium-subscribe">Start Premium · $9.99/mo</button>
+                <button class="btn btn-ghost btn-block" id="premium-cancel-membership" hidden>Cancel membership</button>
+            </div>
+        </section>
+
+        <!-- ═══════════ DRIVER ONBOARDING ═══════════ -->
+        <section id="screen-driver-intro" class="screen">
+            <header class="topbar">
+                <button class="iconbtn" data-nav="role" aria-label="Back">←</button>
+                <div class="topbar-title">Become a driver</div><div class="iconbtn ghost"></div>
+            </header>
+            <div class="scroll-body">
+                <div class="premium-hero red">
+                    <div class="premium-star">🚗</div>
+                    <h2>Earn $25–$50<br>per rescue</h2>
+                    <p>Keep 100% of tips · Instant payout</p>
+                </div>
+                <div class="stat-trio">
+                    <div><b>$31</b><span>avg. job</span></div>
+                    <div><b>100%</b><span>tips kept</span></div>
+                    <div><b>Instant</b><span>payout</span></div>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">Requirements</h3>
+                    <ul class="ticks">
+                        <li>18 years or older</li>
+                        <li>Valid driver's license</li>
+                        <li>Reliable vehicle</li>
+                        <li>Clean driving record</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">One-time registration · $8.99</h3>
+                    <p class="muted">Covers your background check, license verification and training materials.</p>
+                </div>
+            </div>
+            <div class="cta-dock">
+                <button class="btn btn-primary btn-block btn-lg" id="driver-pay-fee">Pay $8.99 &amp; apply</button>
+            </div>
+        </section>
+
+        <section id="screen-driver-apply" class="screen">
+            <header class="topbar">
+                <button class="iconbtn" data-nav="role" aria-label="Back">←</button>
+                <div class="topbar-title">Driver application</div><div class="iconbtn ghost"></div>
+            </header>
+            <div class="progress"><div class="progress-fill" id="apply-progress"></div></div>
+            <div class="scroll-body">
+                <div class="apply-step active" data-astep="1">
+                    <h3>About you</h3>
+                    <label class="field"><span>Date of birth</span><input type="date" id="apply-dob"></label>
+                    <label class="field"><span>Street address</span><input type="text" id="apply-address" placeholder="123 Main St"></label>
+                    <div class="field-row">
+                        <label class="field"><span>City</span><input type="text" id="apply-city" placeholder="Fort Smith"></label>
+                        <label class="field"><span>ZIP</span><input type="text" id="apply-zip" placeholder="72904" inputmode="numeric"></label>
+                    </div>
+                    <button class="btn btn-primary btn-block" data-applynext="2">Continue</button>
+                </div>
+                <div class="apply-step" data-astep="2">
+                    <h3>Driver's license</h3>
+                    <label class="field"><span>License number</span><input type="text" id="apply-license" placeholder="D12345678"></label>
+                    <label class="field"><span>State</span>
+                        <select id="apply-state"><option value="">Select state</option><option>AR</option><option>OK</option><option>TX</option><option>MO</option><option>AL</option><option>TN</option><option>LA</option><option>KS</option></select>
+                    </label>
+                    <div class="upload-box" id="apply-upload">
+                        <input type="file" id="apply-license-file" accept="image/*" hidden>
+                        <span id="apply-upload-label">📄 Upload license photo</span>
+                    </div>
+                    <button class="btn btn-primary btn-block" data-applynext="3">Continue</button>
+                </div>
+                <div class="apply-step" data-astep="3">
+                    <h3>Your vehicle</h3>
+                    <div class="field-row">
+                        <label class="field"><span>Make</span><input type="text" id="apply-make" placeholder="Ford"></label>
+                        <label class="field"><span>Model</span><input type="text" id="apply-model" placeholder="F-150"></label>
+                    </div>
+                    <div class="field-row">
+                        <label class="field"><span>Year</span><input type="number" id="apply-year" placeholder="2020" inputmode="numeric"></label>
+                        <label class="field"><span>Color</span><input type="text" id="apply-color" placeholder="Black"></label>
+                    </div>
+                    <label class="field"><span>License plate</span><input type="text" id="apply-plate" placeholder="ABC 123"></label>
+                    <button class="btn btn-primary btn-block" id="apply-submit">Submit application</button>
+                </div>
+                <div class="apply-step" data-astep="review">
+                    <div class="status-hero"><div class="spin-ring"></div><h3>Reviewing your application…</h3><p class="muted">Verifying license &amp; running background check</p></div>
+                </div>
+                <div class="apply-step" data-astep="approved">
+                    <div class="status-hero"><div class="big-check">✓</div><h3>You're approved! 🎉</h3><p class="muted">Welcome to the GasDash driver fleet.</p>
+                        <button class="btn btn-primary btn-block" id="apply-start-driving">Start driving</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════ DRIVER HOME ═══════════ -->
+        <section id="screen-driver" class="screen has-tabbar driver-tabs">
+            <header class="topbar">
+                <label class="online-toggle">
+                    <input type="checkbox" id="driver-online">
+                    <span class="online-track"><span class="online-thumb"></span></span>
+                    <b id="driver-online-label">Offline</b>
+                </label>
+                <div class="topbar-title"></div>
+                <button class="iconbtn" id="driver-assistant" aria-label="Assistant">💬</button>
+            </header>
+            <div class="earnings-hero">
+                <span>Today's earnings</span>
+                <b id="driver-today">$0.00</b>
+                <div class="earnings-sub">
+                    <div><b id="driver-trips">0</b><span>rescues</span></div>
+                    <div><b id="driver-hours">0.0h</b><span>online</span></div>
+                    <div><b id="driver-rating">5.0★</b><span>rating</span></div>
+                </div>
+            </div>
+            <div class="map-shell"><div id="map-driver" class="map"></div></div>
+            <div class="sheet" id="driver-idle">
+                <div class="pulse-wrap" id="driver-pulse" hidden><div class="pulse-ring"></div><div class="pulse-core">📡</div></div>
+                <p class="center muted" id="driver-idle-msg">You're offline. Go online to receive rescue requests.</p>
+            </div>
+            <div class="sheet" id="driver-job" hidden>
+                <div class="job-head"><b id="job-service">⛽ Gas delivery</b><span class="chip green" id="job-payout">$0</span></div>
+                <div class="loc-row"><div class="loc-dot"></div><div class="loc-text"><b id="job-customer">Customer</b><span id="job-address">—</span></div></div>
+                <p class="muted" id="job-notes"></p>
+                <button class="btn btn-primary btn-block btn-lg" id="job-action">Navigate to customer</button>
+            </div>
+        </section>
+
+        <!-- ═══════════ DRIVER EARNINGS ═══════════ -->
+        <section id="screen-earnings" class="screen has-tabbar driver-tabs">
+            <header class="topbar"><div class="iconbtn ghost"></div><div class="topbar-title">Earnings</div><div class="iconbtn ghost"></div></header>
+            <div class="scroll-body">
+                <div class="earnings-hero card-style">
+                    <span>This week</span><b id="earn-week">$0.00</b>
+                    <div class="earnings-sub"><div><b id="earn-total-trips">0</b><span>rescues</span></div><div><b id="earn-tips">$0</b><span>tips</span></div><div><b id="earn-best">$0</b><span>best day</span></div></div>
+                </div>
+                <div class="card"><h3 class="card-title">Daily breakdown</h3><div class="bars" id="earn-bars"></div></div>
+                <div class="card"><h3 class="card-title">Recent payouts</h3><div id="earn-history"></div></div>
+            </div>
+        </section>
+
+        <!-- ═══════════ TAB BARS ═══════════ -->
+        <nav class="tabbar" id="tabbar-customer" hidden>
+            <button class="tab active" data-tab="home"><span>🏠</span>Home</button>
+            <button class="tab" data-tab="orders"><span>🧾</span>Orders</button>
+            <button class="tab" data-tab="account"><span>👤</span>Account</button>
+        </nav>
+        <nav class="tabbar" id="tabbar-driver" hidden>
+            <button class="tab active" data-tab="driver"><span>🚗</span>Drive</button>
+            <button class="tab" data-tab="earnings"><span>💰</span>Earnings</button>
+            <button class="tab" data-tab="account"><span>👤</span>Account</button>
+        </nav>
+
+        <!-- ═══════════ MODALS ═══════════ -->
+        <div class="modal-backdrop" id="modal-backdrop" hidden></div>
+
+        <div class="modal" id="modal-pay" hidden>
+            <h3 id="pay-title">Checkout</h3>
+            <div class="pay-rows" id="pay-rows"></div>
+            <label class="field"><span>Payment method</span>
+                <select id="pay-method"><option>💳 Visa •••• 4242 (demo)</option><option>💳 Mastercard •••• 5454 (demo)</option><option> Apple Pay (demo)</option></select>
+            </label>
+            <p class="fineprint">Demo checkout — no real payment is processed.</p>
+            <div class="modal-btns">
+                <button class="btn btn-ghost" id="pay-cancel">Cancel</button>
+                <button class="btn btn-primary" id="pay-confirm">Pay <span id="pay-amount"></span></button>
+            </div>
+        </div>
+
+        <div class="modal" id="modal-request" hidden>
+            <div class="req-timer"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="20" class="req-ring-bg"/><circle cx="22" cy="22" r="20" class="req-ring" id="req-ring"/></svg><b id="req-count">15</b></div>
+            <h3 id="req-service">⛽ Gas delivery request</h3>
+            <div class="req-details">
+                <div class="req-row"><span>Customer</span><b id="req-customer">—</b></div>
+                <div class="req-row"><span>Distance</span><b id="req-distance">—</b></div>
+                <div class="req-row"><span>Est. payout</span><b class="accent-green" id="req-payout">—</b></div>
+            </div>
+            <div class="modal-btns">
+                <button class="btn btn-ghost" id="req-decline">Decline</button>
+                <button class="btn btn-primary" id="req-accept">Accept</button>
+            </div>
+        </div>
+
+        <div class="modal" id="modal-rate" hidden>
+            <div class="rate-avatar avatar lg" id="rate-avatar">M</div>
+            <h3>How was <span id="rate-name">your driver</span>?</h3>
+            <div class="stars-input" id="rate-stars">
+                <button data-star="1">★</button><button data-star="2">★</button><button data-star="3">★</button><button data-star="4">★</button><button data-star="5">★</button>
+            </div>
+            <p class="muted center">Add a tip — drivers keep 100%</p>
+            <div class="tip-row" id="rate-tips">
+                <button data-tip="0">No tip</button><button data-tip="2">$2</button><button data-tip="5" class="active">$5</button><button data-tip="10">$10</button>
+            </div>
+            <div class="modal-btns">
+                <button class="btn btn-primary btn-block" id="rate-submit">Done</button>
+            </div>
+        </div>
+
+        <div class="modal" id="modal-receipt" hidden>
+            <h3>Receipt</h3>
+            <div id="receipt-body"></div>
+            <div class="modal-btns"><button class="btn btn-primary btn-block" id="receipt-close">Close</button></div>
+        </div>
+
+        <!-- ═══════════ ASSISTANT ═══════════ -->
+        <div class="assistant" id="assistant" hidden>
+            <div class="assistant-head">
+                <div class="assistant-id"><span class="assistant-dot"></span><b>Dash Assistant</b></div>
+                <button class="iconbtn" id="assistant-close">✕</button>
+            </div>
+            <div class="assistant-msgs" id="assistant-msgs"></div>
+            <div class="assistant-chips" id="assistant-chips"></div>
+            <div class="assistant-input">
+                <input type="text" id="assistant-text" placeholder="Ask anything…">
+                <button class="btn btn-primary btn-sm" id="assistant-send">➤</button>
+            </div>
+        </div>
+
+        <div class="toast-stack" id="toast-stack"></div>
+    </div>
+
+    <script src="vendor/leaflet.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
