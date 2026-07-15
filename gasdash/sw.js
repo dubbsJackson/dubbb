@@ -1,5 +1,5 @@
 /* GasDash service worker — cache-first for app shell, network-first for tiles */
-const CACHE = 'gasdash-v4';
+const CACHE = 'gasdash-v5';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest', 'icon.svg', 'icon-maskable.svg', 'vendor/leaflet.js', 'vendor/leaflet.css'];
 
 self.addEventListener('install', (e) => {

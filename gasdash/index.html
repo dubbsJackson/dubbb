@@ -186,6 +186,7 @@
                 </div>
                 <div class="card slim" id="track-summary"></div>
                 <button class="btn btn-primary btn-block btn-lg" id="track-confirm" hidden>✓ Job complete — finish order</button>
+                <p class="fineprint center" id="track-real-hint" hidden>Your driver finishes the job by entering your code — payment is already handled.</p>
                 <button class="btn btn-danger-ghost btn-block" id="track-cancel">Cancel order</button>
             </div>
         </section>
@@ -359,9 +360,13 @@
                     <span class="online-track"><span class="online-thumb"></span></span>
                     <b id="driver-online-label">Offline</b>
                 </label>
-                <div class="topbar-title"></div>
+                <div class="topbar-title"><span class="chip" id="driver-mode-chip" hidden>PRACTICE</span></div>
                 <button class="iconbtn" id="driver-assistant" aria-label="Assistant">💬</button>
             </header>
+            <div id="driver-payout-banner" class="banner-premium" style="margin: 0 1rem .6rem;" hidden>
+                <div><b>💸 Instant payouts</b><span>Connect your bank to take live jobs & get paid on the spot</span></div>
+                <button class="btn btn-gold btn-sm" id="driver-payout-setup">Set up</button>
+            </div>
             <div class="earnings-hero">
                 <span>Today's earnings</span>
                 <b id="driver-today">$0.00</b>
@@ -442,7 +447,7 @@
         <div class="modal" id="modal-pin" hidden>
             <h3>🔐 Verify customer</h3>
             <p class="muted center">Ask the customer for their 4-digit code before starting the job.</p>
-            <input type="text" class="pin-input" id="pin-input" inputmode="numeric" maxlength="4" placeholder="••••" autocomplete="one-time-code">
+            <input type="text" class="pin-input" id="pin-input" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="one-time-code">
             <p class="promo-msg bad center" id="pin-error"></p>
             <div class="modal-btns">
                 <button class="btn btn-ghost" id="pin-cancel">Back</button>
@@ -456,10 +461,11 @@
             <div class="stars-input" id="rate-stars">
                 <button data-star="1">★</button><button data-star="2">★</button><button data-star="3">★</button><button data-star="4">★</button><button data-star="5">★</button>
             </div>
-            <p class="muted center">Add a tip — drivers keep 100%</p>
+            <p class="muted center" id="rate-tip-label">Add a tip — drivers keep 100%</p>
             <div class="tip-row" id="rate-tips">
                 <button data-tip="0">No tip</button><button data-tip="2">$2</button><button data-tip="5" class="active">$5</button><button data-tip="10">$10</button>
             </div>
+            <p class="fineprint center" id="rate-tip-note" hidden>Tips are cash-only for now — hand it to your driver, they keep 100%.</p>
             <div class="modal-btns">
                 <button class="btn btn-primary btn-block" id="rate-submit">Done</button>
             </div>

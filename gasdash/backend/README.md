@@ -19,12 +19,20 @@ cd gasdash/backend
 # 1. Log in to Cloudflare
 npx wrangler login
 
-# 2. Add your Stripe SECRET key (starts with sk_live_... — or sk_test_... to try it first)
+# 2. Create the order-dispatch storage (once) — paste the printed id
+#    into wrangler.toml where it says REPLACE_WITH_YOUR_KV_ID
+npx wrangler kv namespace create ORDERS
+
+# 3. Add your Stripe SECRET key (starts with sk_live_... — or sk_test_... to try it first)
 npx wrangler secret put STRIPE_SECRET_KEY
 
-# 3. Ship it
+# 4. Ship it
 npx wrangler deploy
 ```
+
+**Stripe side (once):** in your Stripe dashboard, enable **Connect** →
+Express accounts (Settings → Connect). That's what lets drivers plug in
+their bank and receive automatic transfers.
 
 Wrangler prints your worker URL, e.g. `https://gasdash-payments.YOURNAME.workers.dev`.
 
@@ -56,12 +64,23 @@ Use your `sk_test_...` key first. Stripe test mode accepts card number
 When everything looks right, replace the secret with your `sk_live_...` key:
 `npx wrangler secret put STRIPE_SECRET_KEY` again, then `npx wrangler deploy`.
 
-## Phase 2 — paying drivers automatically (Stripe Connect)
+## How drivers get paid automatically
 
-Right now customer money lands in **your** Stripe balance and you pay drivers
-yourself (Zelle/Cash App/etc. while volume is small). When you're ready for
-true Uber-style instant driver payouts, the upgrade is **Stripe Connect
-Express**: drivers onboard with their bank details through a Stripe-hosted
-flow, and this worker splits each charge automatically — 60% + fuel + tip to
-the driver's account, 40% of the fee to yours. Ask Claude to build the
-Connect phase when you have your first real drivers.
+1. In the app's driver mode, the driver taps **💸 Set up** — Stripe's hosted
+   flow collects their identity + bank details (you never touch them).
+2. Once approved, their driver mode flips from PRACTICE to **🟢 LIVE**: going
+   online shows real paid customer orders near them.
+3. They accept → drive → arrive → **enter the customer's 6-digit code**.
+   The code is generated at payment time and only the paying customer has it,
+   so it doubles as payout authorization: the moment it's entered correctly,
+   the worker transfers **60% of the service fee + 100% of the fuel cost** to
+   the driver's Stripe balance, which pays out to their bank. The other 40%
+   of the fee stays in your Stripe balance.
+
+**Money-timing note:** card money takes ~2 days to become available in your
+Stripe balance, but driver transfers happen instantly at job completion — so
+keep a small buffer in your Stripe balance (Stripe lets you top up), or the
+payout is queued as "pending" and the app retries it automatically.
+
+**Tips:** cash-only for now (the app tells customers drivers keep 100%).
+Card tips through the app are a clean follow-up — ask Claude when you want it.
