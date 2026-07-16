@@ -37,6 +37,7 @@ const GAS_PRICES = { regular: 3.29, midgrade: 3.79, premium: 4.29, diesel: 3.99 
 const GAS_LABELS = { regular: 'Regular 87', midgrade: 'Mid 89', premium: 'Premium 93', diesel: 'Diesel' };
 const PREMIUM_RATE = 0.15;   // 15% off the service fee for premium members
 const DRIVER_SHARE = 0.60;   // driver keeps 60% of the service fee (fuel is 100% theirs)
+const FUEL_PICKUP_FEE = 5;   // gas orders only: flat fee for the pump stop, 100% to the driver, not discounted
 const ORDER_TTL_S = 60 * 60 * 12; // orders expire from dispatch after 12h
 
 const cents = (usd) => Math.round(usd * 100);
@@ -66,7 +67,7 @@ function computeFare(order) {
     const extraMiles = Math.max(0, Math.ceil(distance - svc.includedMiles));
     const fee = svc.baseFee + extraMiles * svc.perMile;
 
-    let fuel = 0, fuelLabel = null;
+    let fuel = 0, fuelLabel = null, fuelPickupFee = 0;
     if (order.service === 'gas') {
         const gallons = Number(order.gallons);
         const price = GAS_PRICES[order.gasType];
@@ -74,13 +75,18 @@ function computeFare(order) {
         if (!Number.isInteger(gallons) || gallons < 1 || gallons > 20) throw new Error('bad gallons');
         fuel = Math.round(price * gallons * 100) / 100;
         fuelLabel = `${GAS_LABELS[order.gasType]} × ${gallons} gal (pump price)`;
+        fuelPickupFee = FUEL_PICKUP_FEE;
     }
 
     let discount = 0;
     if (order.premium === true) discount = Math.round(fee * PREMIUM_RATE * 100) / 100;
 
-    const driverAmount = Math.round(fee * DRIVER_SHARE * 100) / 100 + fuel; // discount never touches the driver
-    return { svc, fee, extraMiles, fuel, fuelLabel, discount, total: fee + fuel - discount, driverAmount };
+    // Discount never touches fuel, the pickup fee, or the driver's cut of the service fee.
+    const driverAmount = Math.round(fee * DRIVER_SHARE * 100) / 100 + fuel + fuelPickupFee;
+    return {
+        svc, fee, extraMiles, fuel, fuelLabel, fuelPickupFee, discount,
+        total: fee + fuel + fuelPickupFee - discount, driverAmount,
+    };
 }
 
 async function stripe(env, path, params, idemKey) {
@@ -162,6 +168,10 @@ export default {
                     params['line_items[1][price_data][currency]'] = 'usd';
                     params['line_items[1][price_data][product_data][name]'] = fare.fuelLabel;
                     params['line_items[1][price_data][unit_amount]'] = String(cents(fare.fuel));
+                    params['line_items[2][quantity]'] = '1';
+                    params['line_items[2][price_data][currency]'] = 'usd';
+                    params['line_items[2][price_data][product_data][name]'] = 'Fuel pickup fee (100% to driver)';
+                    params['line_items[2][price_data][unit_amount]'] = String(cents(fare.fuelPickupFee));
                 }
                 if (order.service === 'gas') {
                     params['metadata[gasType]'] = order.gasType;

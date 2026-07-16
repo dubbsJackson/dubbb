@@ -6,7 +6,7 @@ Uber-style roadside rescue. One app, two modes: **get help** or **drive & earn**
 
 | | Customer pays | Driver receives | Platform keeps |
 |---|---|---|---|
-| ⛽ **Gas delivery** | $35 service fee (first 5 mi included) + $2/mi after + fuel at pump price | 60% of service fee ($21 base) + **100% fuel reimbursed** + 100% tips | 40% of service fee ($14 base) |
+| ⛽ **Gas delivery** | $35 service fee (first 5 mi included) + $2/mi after + fuel at pump price + $5 fuel pickup fee | 60% of service fee ($21 base) + **100% fuel reimbursed** + **100% of the $5 pickup fee** + 100% tips | 40% of service fee ($14 base) |
 | 🔋 **Jump start** | $40 service fee (first 5 mi included) + $2/mi after | 60% of service fee ($24 base) + 100% tips | 40% of service fee ($16 base) |
 
 - Customer pays **in the app up front** — picks fuel type & gallons, sees the exact
