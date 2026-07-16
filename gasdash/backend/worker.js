@@ -31,7 +31,7 @@
 // ── Pay scale — keep in sync with app.js ──
 const PRICING = {
     gas:  { name: 'Gas Delivery', baseFee: 35, includedMiles: 5, perMile: 2 },
-    jump: { name: 'Jump Start',   baseFee: 40, includedMiles: 5, perMile: 2 },
+    jump: { name: 'Jump Start',   baseFee: 30, includedMiles: 3, perMile: 2 },
 };
 const GAS_PRICES = { regular: 3.29, midgrade: 3.79, premium: 4.29, diesel: 3.99 };
 const GAS_LABELS = { regular: 'Regular 87', midgrade: 'Mid 89', premium: 'Premium 93', diesel: 'Diesel' };

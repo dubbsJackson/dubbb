@@ -52,7 +52,7 @@ in your Stripe balance.
 
 - The customer's card is only ever entered on Stripe's page — your site and
   this worker never see card numbers (that keeps you out of PCI scope).
-- The worker **recomputes the fare from scratch** ($35/$40 base, 5 miles
+- The worker **recomputes the fare from scratch** ($35 gas / $30 jump base, miles
   included, $2/mile, pump-price fuel) — a tampered browser can't change
   the price it pays.
 - Your Stripe secret key lives only in Cloudflare's encrypted secrets store.

@@ -27,7 +27,7 @@ const GAS_TYPES = [
 // then perMile is added for every mile beyond that.
 const SERVICES = {
     gas:  { icon: '⛽', name: 'Gas Delivery', from: 35, badge: '24/7', baseFee: 35, includedMiles: 5, perMile: 2 },
-    jump: { icon: '🔋', name: 'Jump Start',   from: 40, badge: '24/7', baseFee: 40, includedMiles: 5, perMile: 2 },
+    jump: { icon: '🔋', name: 'Jump Start',   from: 30, badge: '24/7', baseFee: 30, includedMiles: 3, perMile: 2 },
 };
 
 function serviceFee(svcKey, miles) {
@@ -1419,14 +1419,14 @@ const ASSISTANT_BRAIN = [
         ? `Your ${SERVICES[active.service].name.toLowerCase()} order is ${active.statusLabel.toLowerCase()} ${active.driver ? `— ${active.driver.name} is driving a ${active.driver.car}.` : ''} Tap the Track banner on Home to watch them come to you live on the map.`
         : 'You don\'t have an active order right now. Tap Gas Delivery or Jump Start on the Home screen and help will be on the way in minutes!' },
     { match: /price|pricing|cost|how much|fee|mile|distance/i, reply: () =>
-        'Simple, Uber-style pricing:\n\n⛽ Gas delivery — $35 service fee (first 5 miles included) + $2/mile after, plus your fuel at pump price + a $5 fuel pickup fee (100% goes to your driver for the pump stop). You pick the gallons, we bring the gas.\n🔋 Jump start — $40 service fee (first 5 miles included) + $2/mile after.\n\nThe further away you are, the fare adjusts automatically — you see the exact total before you pay. ⭐ Premium members get 15% off the service fee.' },
+        'Simple, Uber-style pricing:\n\n⛽ Gas delivery — $35 service fee (first 5 miles included) + $2/mile after, plus your fuel at pump price + a $5 fuel pickup fee (100% goes to your driver for the pump stop). You pick the gallons, we bring the gas.\n🔋 Jump start — starts at just $30 (first 3 miles included) + $2/mile after.\n\nThe further away you are, the fare adjusts automatically — you see the exact total before you pay. ⭐ Premium members get 15% off the service fee.' },
     { match: /code|pin|verify|prove/i, reply: () =>
         'Safety first 🔐 — every order gets a 4-digit code. When your driver arrives, it appears on your tracking screen. Say it to the driver; they can\'t start (or get paid for) the job without it. That way you know it\'s your driver, and they know it\'s you.' },
     { match: /paid|payout|payment.*(driver)|driver.*(paid|pay|earn|money|cut)|how do drivers/i, reply: () =>
         'Drivers keep 60% of every service fee, get fuel costs reimbursed 100% on gas runs, plus a $5 fuel pickup fee (100% theirs) for the pump stop, and keep 100% of tips. The money hits their balance the instant the customer confirms the job is complete — no waiting for a weekly deposit. 💸' },
     { match: /driver|earn|drive|job|money|sign.?up/i, reply: () =>
         user.driverApproved ? 'You\'re already an approved driver! Switch to driver mode from your Account tab, flip yourself Online, and requests will start rolling in. 60% of every fare + 100% of tips, paid instantly. 💰'
-        : 'Drivers keep 60% of every fare ($21–$24+ per rescue, more on longer trips), 100% of tips, and on gas runs get fuel reimbursed 100% plus a $5 pickup fee for the pump stop — all paid instantly when the job completes. One-time $8.99 registration covers your background check. Tap "Drive & Earn" on the role screen to apply.' },
+        : 'Drivers keep 60% of every fare ($18–$21+ per rescue, more on longer trips), 100% of tips, and on gas runs get fuel reimbursed 100% plus a $5 pickup fee for the pump stop — all paid instantly when the job completes. One-time $8.99 registration covers your background check. Tap "Drive & Earn" on the role screen to apply.' },
     { match: /premium|member|subscri|worth/i, reply: () =>
         user.premium ? 'You\'re Premium already ⭐ — 15% comes off every service fee automatically. It\'s working right now.'
         : 'Premium is $9.99/mo for 15% off every service fee + priority matching and free cancellations. Order twice a month and it pays for itself. Try it from the Account tab.' },
