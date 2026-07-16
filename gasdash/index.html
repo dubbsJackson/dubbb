@@ -496,5 +496,22 @@
 
     <script src="vendor/leaflet.js"></script>
     <script src="app.js"></script>
+    <script>
+      /* Last-resort failsafe: this runs even if app.js fails to parse (a
+         separate <script> is unaffected by errors in another). If the app
+         never revealed itself, show the login shell instead of a blank page. */
+      setTimeout(function () {
+        var app = document.getElementById('app');
+        if (app && app.hidden) {
+          app.hidden = false;
+          var splash = document.getElementById('splash-screen');
+          if (splash) splash.classList.add('hide');
+          if (!document.querySelector('.screen.active')) {
+            var auth = document.getElementById('screen-auth');
+            if (auth) auth.classList.add('active');
+          }
+        }
+      }, 4000);
+    </script>
 </body>
 </html>

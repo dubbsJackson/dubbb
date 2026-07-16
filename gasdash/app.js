@@ -172,15 +172,21 @@ function locate(cb) {
 /* ── Boot ───────────────────────────────────────────────── */
 
 document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(async () => {
+    setTimeout(() => {
+        // Always reveal the app first — a later error must never leave a blank screen.
         $('splash-screen').classList.add('hide');
         $('app').hidden = false;
-        const email = Store.session();
-        if (email && Store.get(email)) {
-            user = Store.get(email);
-            if (!handleConnectReturn() && !handleCheckoutReturn()) enterRoleHub();
-        } else {
-            show('auth');
+        try {
+            const email = Store.session();
+            if (email && Store.get(email)) {
+                user = Store.get(email);
+                if (!handleConnectReturn() && !handleCheckoutReturn()) enterRoleHub();
+            } else {
+                show('auth');
+            }
+        } catch (err) {
+            console.error('GasDash boot error:', err);
+            try { show('auth'); } catch (_) { /* shell is already visible */ }
         }
     }, 1400);
 
@@ -1492,7 +1498,16 @@ function scrollAssistant() {
 /* ── PWA ────────────────────────────────────────────────── */
 
 function wirePWA() {
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+    // We deliberately do NOT cache via a service worker anymore — an earlier
+    // cache-first worker could pin returning visitors to a stale/broken build.
+    // Register the self-retiring sw.js, which clears old caches and unregisters
+    // itself, and proactively clear any leftover caches from older versions.
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+    if (window.caches) {
+        caches.keys().then((keys) => keys.forEach((k) => caches.delete(k))).catch(() => {});
+    }
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredInstall = e;
