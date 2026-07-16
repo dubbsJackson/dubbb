@@ -73,9 +73,10 @@ When everything looks right, replace the secret with your `sk_live_...` key:
 3. They accept → drive → arrive → **enter the customer's 6-digit code**.
    The code is generated at payment time and only the paying customer has it,
    so it doubles as payout authorization: the moment it's entered correctly,
-   the worker transfers **60% of the service fee + 100% of the fuel cost** to
-   the driver's Stripe balance, which pays out to their bank. The other 40%
-   of the fee stays in your Stripe balance.
+   the worker transfers **60% of the service fee + 100% of the fuel cost +
+   the full $5 fuel pickup fee (gas orders only)** to the driver's Stripe
+   balance, which pays out to their bank. The other 40% of the service fee
+   stays in your Stripe balance.
 
 **Money-timing note:** card money takes ~2 days to become available in your
 Stripe balance, but driver transfers happen instantly at job completion — so

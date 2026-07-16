@@ -14,6 +14,7 @@ const PREMIUM_FEE = 9.99;
 const PREMIUM_RATE = 0.15; // 15% off the service fee only — fuel is always pump price
 const DRIVER_FEE = 8.99;
 const DRIVER_SHARE = 0.60; // drivers keep 60% of the service fee (platform 40%); fuel + tips are 100% theirs
+const FUEL_PICKUP_FEE = 5; // gas orders only: flat fee for the pump stop, 100% to the driver — not part of the platform's cut, not discounted by Premium
 
 const GAS_TYPES = [
     { id: 'regular',  name: 'Regular 87',  price: 3.29 },
@@ -367,24 +368,26 @@ function priceDraft() {
     const rows = [{ label: `Service fee (first ${s.includedMiles} mi included)`, amt: s.baseFee }];
     if (extraMiles > 0) rows.push({ label: `Distance · +${extraMiles} mi × $${s.perMile}`, amt: extraMiles * s.perMile });
 
-    let fuel = 0;
+    let fuel = 0, fuelPickupFee = 0;
     if (d.service === 'gas') {
         const g = GAS_TYPES.find((x) => x.id === d.gasType);
         fuel = Math.round(g.price * d.gallons * 100) / 100;
         rows.push({ label: `${g.name} × ${d.gallons} gal (pump price)`, amt: fuel });
+        fuelPickupFee = FUEL_PICKUP_FEE;
+        rows.push({ label: 'Fuel pickup fee (100% to driver)', amt: fuelPickupFee });
     }
 
     // Premium discount applies to the service fee only — never the fuel,
-    // and never the driver's cut (drivers are paid on the full fee).
+    // never the pickup fee, and never the driver's cut (drivers are paid on the full fee).
     let discount = 0;
     const notes = [];
     if (user.premium) { discount = Math.round(fee * PREMIUM_RATE * 100) / 100; notes.push('⭐ Premium −15% service fee'); }
 
     return {
-        rows, fee, fuel, discount, notes,
-        subtotal: fee + fuel,
-        total: Math.max(0, fee + fuel - discount),
-        driverEarns: driverCut(fee) + fuel, // what the driver takes home (before tip)
+        rows, fee, fuel, fuelPickupFee, discount, notes,
+        subtotal: fee + fuel + fuelPickupFee,
+        total: Math.max(0, fee + fuel + fuelPickupFee - discount),
+        driverEarns: driverCut(fee) + fuel + fuelPickupFee, // what the driver takes home (before tip)
     };
 }
 
@@ -725,7 +728,7 @@ function completeOrder() {
     if (active.real) {
         toast('Job complete ✅ Your driver has been paid instantly', 'ok');
     } else {
-        const payout = driverCut(active.pricing.fee) + active.pricing.fuel;
+        const payout = driverCut(active.pricing.fee) + active.pricing.fuel + (active.pricing.fuelPickupFee || 0);
         toast(`Job complete ✅ ${active.driver.name} was paid ${money(payout)} instantly`, 'ok');
     }
     later(() => openRating(), 900);
@@ -1112,7 +1115,7 @@ function showIncomingRequest(realOrder = null) {
         $('req-service').textContent = `${s.icon} ${s.name} — LIVE request`;
         $('req-customer').textContent = pendingReq.customer;
         $('req-distance').textContent = `${pendingReq.distance.toFixed(1)} mi away`;
-        $('req-payout').textContent = money(pendingReq.payout) + (pendingReq.fuel ? ' (incl. fuel reimbursed)' : '');
+        $('req-payout').textContent = money(pendingReq.payout) + (pendingReq.fuel ? ' (incl. fuel reimbursed + pickup fee)' : '');
         openModal('modal-request');
         if (navigator.vibrate) navigator.vibrate([100, 60, 100]);
         startReqCountdown(() => {
@@ -1131,20 +1134,21 @@ function demoIncomingRequest() {
     const s = SERVICES[svcKey];
     const distance = rand(1, 11);
     const { fee } = serviceFee(svcKey, distance);
-    let fuel = 0, fuelLabel = '';
+    let fuel = 0, fuelPickupFee = 0, fuelLabel = '';
     if (svcKey === 'gas') {
         const g = pick(GAS_TYPES);
         const gallons = Math.floor(rand(2, 13));
         fuel = Math.round(g.price * gallons * 100) / 100;
-        fuelLabel = ` (+${money(fuel)} fuel reimbursed)`;
+        fuelPickupFee = FUEL_PICKUP_FEE;
+        fuelLabel = ` (+${money(fuel)} fuel reimbursed +${money(fuelPickupFee)} pickup)`;
     }
     pendingReq = {
         service: svcKey,
         customer: pick(CUSTOMER_NAMES),
         address: `${Math.floor(rand(100, 9900))} ${pick(STREETS)}`,
         distance,
-        fee, fuel,
-        payout: driverCut(fee) + fuel,
+        fee, fuel, fuelPickupFee,
+        payout: driverCut(fee) + fuel + fuelPickupFee,
         notes: Math.random() < 0.5 ? pick(['Silver sedan on the shoulder', 'In the Walmart parking lot', 'Hazards are on', 'Near the gas station entrance']) : '',
     };
     $('req-service').textContent = `${s.icon} ${s.name} request`;
@@ -1318,6 +1322,7 @@ function finishJob() {
     const tip = Math.random() < 0.65 ? pick([2, 3, 5, 5, 10]) : 0;
     const serviceCut = driverCut(job.fee);
     const fuel = job.fuel;
+    const fuelPickupFee = job.fuelPickupFee || 0;
     const total = job.payout + tip;
     const rating = pick([5, 5, 5, 5, 4]);
     user.payouts.unshift({ service: job.service, amount: total, tip, at: Date.now(), customer: job.customer });
@@ -1335,7 +1340,7 @@ function finishJob() {
     renderDriverStats();
     toast(`💰 Paid instantly: +${money(total)}`, 'ok');
     const breakdown = `${money(serviceCut)} fare` +
-        (fuel > 0 ? ` + ${money(fuel)} fuel reimbursed` : '') +
+        (fuel > 0 ? ` + ${money(fuel)} fuel reimbursed + ${money(fuelPickupFee)} pickup fee` : '') +
         (tip > 0 ? ` + ${money(tip)} tip` : '');
     setTimeout(() => toast(`Breakdown: ${breakdown}`, 'ok'), 1200);
     if (navigator.vibrate) navigator.vibrate([60, 30, 60]);
@@ -1414,14 +1419,14 @@ const ASSISTANT_BRAIN = [
         ? `Your ${SERVICES[active.service].name.toLowerCase()} order is ${active.statusLabel.toLowerCase()} ${active.driver ? `— ${active.driver.name} is driving a ${active.driver.car}.` : ''} Tap the Track banner on Home to watch them come to you live on the map.`
         : 'You don\'t have an active order right now. Tap Gas Delivery or Jump Start on the Home screen and help will be on the way in minutes!' },
     { match: /price|pricing|cost|how much|fee|mile|distance/i, reply: () =>
-        'Simple, Uber-style pricing:\n\n⛽ Gas delivery — $35 service fee (first 5 miles included) + $2/mile after, plus your fuel at pump price. You pick the gallons, we bring the gas.\n🔋 Jump start — $40 service fee (first 5 miles included) + $2/mile after.\n\nThe further away you are, the fare adjusts automatically — you see the exact total before you pay. ⭐ Premium members get 15% off the service fee.' },
+        'Simple, Uber-style pricing:\n\n⛽ Gas delivery — $35 service fee (first 5 miles included) + $2/mile after, plus your fuel at pump price + a $5 fuel pickup fee (100% goes to your driver for the pump stop). You pick the gallons, we bring the gas.\n🔋 Jump start — $40 service fee (first 5 miles included) + $2/mile after.\n\nThe further away you are, the fare adjusts automatically — you see the exact total before you pay. ⭐ Premium members get 15% off the service fee.' },
     { match: /code|pin|verify|prove/i, reply: () =>
         'Safety first 🔐 — every order gets a 4-digit code. When your driver arrives, it appears on your tracking screen. Say it to the driver; they can\'t start (or get paid for) the job without it. That way you know it\'s your driver, and they know it\'s you.' },
     { match: /paid|payout|payment.*(driver)|driver.*(paid|pay|earn|money|cut)|how do drivers/i, reply: () =>
-        'Drivers keep 60% of every service fee, get fuel costs reimbursed 100% on gas runs, and keep 100% of tips. The money hits their balance the instant the customer confirms the job is complete — no waiting for a weekly deposit. 💸' },
+        'Drivers keep 60% of every service fee, get fuel costs reimbursed 100% on gas runs, plus a $5 fuel pickup fee (100% theirs) for the pump stop, and keep 100% of tips. The money hits their balance the instant the customer confirms the job is complete — no waiting for a weekly deposit. 💸' },
     { match: /driver|earn|drive|job|money|sign.?up/i, reply: () =>
         user.driverApproved ? 'You\'re already an approved driver! Switch to driver mode from your Account tab, flip yourself Online, and requests will start rolling in. 60% of every fare + 100% of tips, paid instantly. 💰'
-        : 'Drivers keep 60% of every fare ($21–$24+ per rescue, more on longer trips), 100% of tips, and fuel is reimbursed on gas runs — all paid instantly when the job completes. One-time $8.99 registration covers your background check. Tap "Drive & Earn" on the role screen to apply.' },
+        : 'Drivers keep 60% of every fare ($21–$24+ per rescue, more on longer trips), 100% of tips, and on gas runs get fuel reimbursed 100% plus a $5 pickup fee for the pump stop — all paid instantly when the job completes. One-time $8.99 registration covers your background check. Tap "Drive & Earn" on the role screen to apply.' },
     { match: /premium|member|subscri|worth/i, reply: () =>
         user.premium ? 'You\'re Premium already ⭐ — 15% comes off every service fee automatically. It\'s working right now.'
         : 'Premium is $9.99/mo for 15% off every service fee + priority matching and free cancellations. Order twice a month and it pays for itself. Try it from the Account tab.' },
