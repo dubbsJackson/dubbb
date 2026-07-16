@@ -27,7 +27,7 @@ const GAS_TYPES = [
 // then perMile is added for every mile beyond that.
 const SERVICES = {
     gas:  { icon: '⛽', name: 'Gas Delivery', from: 35, badge: '24/7', baseFee: 35, includedMiles: 5, perMile: 2 },
-    jump: { icon: '🔋', name: 'Jump Start',   from: 30, badge: '24/7', baseFee: 30, includedMiles: 3, perMile: 2 },
+    jump: { icon: '🔋', name: 'Jump Start',   from: 30, badge: '24/7', baseFee: 30, includedMiles: 3, perMile: 1 },
 };
 
 function serviceFee(svcKey, miles) {
@@ -1419,7 +1419,7 @@ const ASSISTANT_BRAIN = [
         ? `Your ${SERVICES[active.service].name.toLowerCase()} order is ${active.statusLabel.toLowerCase()} ${active.driver ? `— ${active.driver.name} is driving a ${active.driver.car}.` : ''} Tap the Track banner on Home to watch them come to you live on the map.`
         : 'You don\'t have an active order right now. Tap Gas Delivery or Jump Start on the Home screen and help will be on the way in minutes!' },
     { match: /price|pricing|cost|how much|fee|mile|distance/i, reply: () =>
-        'Simple, Uber-style pricing:\n\n⛽ Gas delivery — $35 service fee (first 5 miles included) + $2/mile after, plus your fuel at pump price + a $5 fuel pickup fee (100% goes to your driver for the pump stop). You pick the gallons, we bring the gas.\n🔋 Jump start — starts at just $30 (first 3 miles included) + $2/mile after.\n\nThe further away you are, the fare adjusts automatically — you see the exact total before you pay. ⭐ Premium members get 15% off the service fee.' },
+        'Simple, Uber-style pricing:\n\n⛽ Gas delivery — $35 service fee (first 5 miles included) + $2/mile after, plus your fuel at pump price + a $5 fuel pickup fee (100% goes to your driver for the pump stop). You pick the gallons, we bring the gas.\n🔋 Jump start — starts at just $30 (first 3 miles included) + $1/mile after, so it stays under $41 unless you\'re 14+ miles out.\n\nThe further away you are, the fare adjusts automatically — you see the exact total before you pay. ⭐ Premium members get 15% off the service fee.' },
     { match: /code|pin|verify|prove/i, reply: () =>
         'Safety first 🔐 — every order gets a 4-digit code. When your driver arrives, it appears on your tracking screen. Say it to the driver; they can\'t start (or get paid for) the job without it. That way you know it\'s your driver, and they know it\'s you.' },
     { match: /paid|payout|payment.*(driver)|driver.*(paid|pay|earn|money|cut)|how do drivers/i, reply: () =>
