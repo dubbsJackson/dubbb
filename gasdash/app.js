@@ -46,6 +46,54 @@ const PAYMENT_API_URL = '';
 // (can also be overridden per-device: localStorage.setItem('gd2:paymentApi', 'https://…'))
 const PAYMENT_API = (localStorage.getItem('gd2:paymentApi') || PAYMENT_API_URL).replace(/\/$/, '');
 
+// ── Payment Links (no-server launch mode) ──
+// Flat-price Stripe Payment Links, one per service tier. Paste each link's URL
+// below to go live without the payment server. Distance/gallons pick the tier;
+// the customer pays that flat price on Stripe's hosted page. When PAYMENT_API
+// is set it takes priority (exact fares + auto driver payout); otherwise these
+// links are used; if both are empty the app runs in demo checkout.
+const PAYMENT_LINKS = {
+    jump: [
+        { key: 'near', label: 'Jump Start · nearby (0–7 mi)', price: 32, maxMiles: 7,       url: '' },
+        { key: 'far',  label: 'Jump Start · far (8+ mi)',     price: 42, maxMiles: Infinity, url: '' },
+    ],
+    gas: [
+        { key: 'g2', label: 'Gas Delivery · up to 2 gallons', price: 47, maxGallons: 2,        url: '' },
+        { key: 'g5', label: 'Gas Delivery · up to 5 gallons', price: 57, maxGallons: Infinity, url: '' },
+    ],
+};
+
+// Per-device override so links can be set without a code change:
+//   localStorage.setItem('gd2:links', JSON.stringify({'jump.near':'https://…','gas.g2':'https://…'}))
+(function applyLinkOverrides() {
+    try {
+        const ov = JSON.parse(localStorage.getItem('gd2:links') || '{}');
+        for (const group of Object.keys(PAYMENT_LINKS)) {
+            for (const tier of PAYMENT_LINKS[group]) {
+                const k = `${group}.${tier.key}`;
+                if (ov[k]) tier.url = ov[k];
+            }
+        }
+    } catch (_) { /* ignore malformed override */ }
+})();
+
+// Links mode is active only when at least one link URL is filled in and the
+// full payment server is not configured.
+function linksConfigured() {
+    return !PAYMENT_API && [...PAYMENT_LINKS.jump, ...PAYMENT_LINKS.gas].some((t) => t.url);
+}
+
+// Pick the flat-price tier for the current draft order.
+function linkTier(d) {
+    if (d.service === 'jump') {
+        return PAYMENT_LINKS.jump.find((t) => d.driverDistance <= t.maxMiles) || PAYMENT_LINKS.jump[PAYMENT_LINKS.jump.length - 1];
+    }
+    if (d.service === 'gas') {
+        return PAYMENT_LINKS.gas.find((t) => d.gallons <= t.maxGallons) || PAYMENT_LINKS.gas[PAYMENT_LINKS.gas.length - 1];
+    }
+    return null;
+}
+
 const DRIVER_NAMES = ['Marcus T.', 'Sarah K.', 'Devon R.', 'Alicia M.', 'James P.', 'Rosa G.', 'Tyler B.', 'Nina V.'];
 const DRIVER_CARS = ['Black Ford F-150', 'White Chevy Silverado', 'Silver Toyota Tacoma', 'Red RAM 1500', 'Blue Honda Ridgeline', 'Gray GMC Sierra'];
 const CUSTOMER_NAMES = ['Jordan W.', 'Emily C.', 'Mike D.', 'Tanya R.', 'Chris L.', 'Ashley B.'];
@@ -180,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const email = Store.session();
             if (email && Store.get(email)) {
                 user = Store.get(email);
-                if (!handleConnectReturn() && !handleCheckoutReturn()) enterRoleHub();
+                if (!handleConnectReturn() && !handleCheckoutReturn() && !handleLinkReturn()) enterRoleHub();
             } else {
                 show('auth');
             }
@@ -362,7 +410,9 @@ function renderOrderOptions() {
 
     host.querySelectorAll('[data-gas]').forEach((b) => b.addEventListener('click', () => { draft.gasType = b.dataset.gas; renderOrderOptions(); recalc(); }));
     host.querySelectorAll('[data-step]').forEach((b) => b.addEventListener('click', () => {
-        draft.gallons = Math.min(20, Math.max(1, draft.gallons + Number(b.dataset.step)));
+        // In payment-links launch mode we only sell up to 5 gal (the largest tier).
+        const maxGal = linksConfigured() ? 5 : 20;
+        draft.gallons = Math.min(maxGal, Math.max(1, draft.gallons + Number(b.dataset.step)));
         renderOrderOptions(); recalc();
     }));
 }
@@ -398,6 +448,17 @@ function priceDraft() {
 }
 
 function recalc() {
+    // Payment-links launch mode: show the flat tier price the customer will pay.
+    if (linksConfigured()) {
+        const tier = linkTier(draft);
+        $('price-rows').innerHTML =
+            `<div class="price-row"><span>${tier.label}</span><span>${money(tier.price)}</span></div>` +
+            (draft.service === 'gas' ? `<div class="price-row"><span>Includes fuel &amp; delivery</span><span></span></div>` : '');
+        $('price-total').textContent = money(tier.price);
+        $('order-submit-price').textContent = money(tier.price);
+        $('premium-nudge').hidden = true;
+        return;
+    }
     const p = priceDraft();
     $('price-rows').innerHTML =
         p.rows.map((r) => `<div class="price-row"><span>${r.label}</span><span>${money(r.amt)}</span></div>`).join('') +
@@ -422,10 +483,47 @@ function wireOrderBuilder() {
 
     $('order-submit').addEventListener('click', () => {
         draft.notes = $('order-notes').value.trim();
-        const p = priceDraft();
         if (PAYMENT_API) return startRealCheckout();
+        if (linksConfigured()) return startLinkCheckout();
+        const p = priceDraft();
         openPayModal(`${SERVICES[draft.service].icon} ${SERVICES[draft.service].name}`, p, () => placeOrder(p));
     });
+}
+
+/* ── Checkout via a Stripe Payment Link (no-server launch mode) ─────── */
+
+function startLinkCheckout() {
+    const tier = linkTier(draft);
+    if (!tier || !tier.url) return toast('That option isn\'t available for online payment yet');
+    // Clean flat-price pricing object for the receipt / order history.
+    const p = {
+        rows: [{ label: tier.label, amt: tier.price }],
+        fee: tier.price, fuel: 0, fuelPickupFee: 0, discount: 0, notes: [],
+        subtotal: tier.price, total: tier.price,
+    };
+    localStorage.setItem('gd2:pendingLink', JSON.stringify({ draft, pricing: p, tier: tier.key, ts: Date.now() }));
+    toast('Opening secure checkout…', 'ok');
+    // Add the customer's notes so they show on the Stripe receipt / your dashboard.
+    const url = new URL(tier.url);
+    if (draft.notes) url.searchParams.set('client_reference_id', draft.notes.slice(0, 190).replace(/[^\w .,-]/g, ''));
+    window.location.assign(url.toString());
+}
+
+// Handle the ?paid=1 return from a Stripe Payment Link.
+function handleLinkReturn() {
+    const params = new URLSearchParams(location.search);
+    if (params.get('paid') !== '1') return false;
+    history.replaceState(null, '', location.pathname);
+    const raw = localStorage.getItem('gd2:pendingLink');
+    localStorage.removeItem('gd2:pendingLink');
+    if (!raw) return false;
+    const saved = JSON.parse(raw);
+    draft = saved.draft;
+    mode = 'customer';
+    enterCustomer();
+    toast('Payment received — finding your driver! 🎉', 'ok');
+    placeOrder(saved.pricing);
+    return true;
 }
 
 /* ── Real checkout via Stripe (when PAYMENT_API is configured) ──────── */
