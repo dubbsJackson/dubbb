@@ -24,6 +24,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      # The DreamBodX game is a static app (no build step). Copy it into the
+      # published output so it lives alongside the store: the store serves from
+      # the site root and the game from /game/. They no longer overwrite each
+      # other on GitHub Pages.
+      - name: Include the game at /game/
+        run: cp -r game dist/game
       # Pushes the built dist/ to a gh-pages branch. This works from any source
       # branch (unlike the github-pages environment, which only allows the
       # default branch). After the first run, enable Pages once in
